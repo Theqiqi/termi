@@ -3,3 +3,4 @@ bin/
 .cache/
 *.o
 cmake-build-*/
+.idea
