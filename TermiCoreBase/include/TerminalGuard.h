@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fcntl.h>
+#include <errno.h>
 
 class TerminalGuard {
 public:
@@ -26,24 +28,30 @@ public:
             perror("tcsetattr");
             exit(1);
         }
+        // 设置 STDIN 为非阻塞模式
+        int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+        fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
     }
 
     // 析构函数：确保程序结束时恢复终端
     ~TerminalGuard() {
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     }
+    // 封装一个简单的读取函数
+    int readKey() {
+        unsigned char ch;
+        ssize_t nread = read(STDIN_FILENO, &ch, 1);
 
+        if (nread == -1) {
+            // 在非阻塞模式下，如果没有数据可读，read 会返回 -1
+            // 且 errno 会被设置为 EAGAIN
+            if (errno == EAGAIN) return 0;
+            return -1; // 真正的错误
+        }
+
+        if (nread == 0) return 0; // 没读到数据
+        return ch;
+    }
 private:
     struct termios orig_termios;
 };
-
-int main() {
-    TerminalGuard guard; // 开启保护伞
-
-    std::cout << "终端已进入 Raw Mode。按任意键测试（Ctrl+C 已被禁用，需等待 3 秒自动退出）..." << std::endl;
-
-    // 简单睡眠 3 秒，期间你可以乱敲键盘
-    sleep(3);
-
-    return 0;
-}
