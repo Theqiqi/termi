@@ -112,7 +112,11 @@ void SnakeGame::Reset(int w, int h) {
     score = 0;
     gameOver = false;
     dir = Direction::RIGHT; // 默认朝向
-
+    // 只有当当前分数超过最高分时才更新
+    if (m_score > m_highScore) {
+        m_highScore = m_score;
+    }
+    m_score = 0; // 清空当前分，准备下一局
     // 2. 重新同步边界
     m_width = w;
     m_height = h;

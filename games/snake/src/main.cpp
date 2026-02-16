@@ -62,37 +62,61 @@ void RunGameLogicFrame(SnakeGame& logic, ParticleSystem& ps, int& moveCounter, b
         moveCounter = 0;
     }
 }
+
+void DrawHUD(const SnakeGame& logic, bool aiMode) {
+    // 准备显示文本
+    std::string modeText = aiMode ? " [AI PILOT] " : " [MANUAL] ";
+    const char* modeColor = aiMode ? CG_COLOR_GREEN : CG_COLOR_CYAN;
+
+    // 渲染模式
+    DrawTextEx(2, 0, modeText.c_str(), modeColor);
+
+    // 渲染分数（位置稍微偏移，避免重叠）
+    std::string scoreStr = "SCORE: " + std::to_string(logic.GetScore()) +
+                           "  HIGH: " + std::to_string(logic.GetHighScore());
+    DrawTextEx(20, 0, scoreStr.c_str(), CG_COLOR_YELLOW);
+}
+void DrawControls(int screenHeight) {
+    // 放在屏幕最后一行
+    const char* hint = " [P]Pause  [M]AI  [F]Fast  [R]Reset  [ESC]Exit ";
+    DrawTextEx(2, screenHeight - 1, hint, CG_COLOR_GRAY);
+}
+void DrawGameOverScreen(const SnakeGame& logic, GameUI& view) {
+    std::string msg = "\n   === MISSION FAILED ===\n\n";
+    msg += "   FINAL SCORE : " + std::to_string(logic.GetScore()) + "\n";
+    msg += "   BEST RECORD : " + std::to_string(logic.GetHighScore()) + "\n\n";
+    msg += "   PRESS 'R' TO REBOOT SYSTEM";
+
+    view.DrawOverlay(msg.c_str(), logic);
+}
 /**
  * 执行完整的渲染序列
  */
 void RenderFrame(const SnakeGame& logic, GameUI& view, ParticleSystem& ps, bool isPaused, bool aiMode) {
-
-    // 所有的渲染必须包裹在 Begin/End 之间
     BeginDrawing();
-    ClearBackground();
-    // 1. 底层：游戏主体（食物、蛇、墙、分数、死亡特效）
+    ClearBackground(); // 必须先清屏
+
+    // 1. 顶部：信息区
+    DrawHUD(logic, aiMode);
+
+    // 2. 中间：游戏核心区（墙、蛇、食物）
     view.Draw(logic);
 
-    // 2. 中层：如果游戏结束，注入崩塌粒子
-    if (logic.IsGameOver()) {
-        ps.EmitDeathExplosion(logic.GetWidth(), logic.GetHeight());
-    }
-
-    // 3. 粒子层：更新并渲染所有活跃粒子
+    // 3. 特效层：粒子更新与渲染
     ps.Update();
     ps.Render();
 
-    // 4. 顶层 UI：状态遮罩和文字提示
+    // 4. 底部：指令指引
+    // 使用逻辑高度作为基准，或者直接用 GetScreenHeight()
+    DrawControls(GetScreenHeight());
+
+    // 5. 顶层：状态遮罩（仅在结束或暂停时显示）
     if (logic.IsGameOver()) {
-        view.DrawOverlay(" [ SYSTEM FAILURE ] \n PRESS R TO REBOOT ", logic);
+        DrawGameOverScreen(logic, view);
     } else if (isPaused) {
-        view.DrawOverlay(" SYSTEM PAUSED ", logic);
+        view.DrawOverlay("\n   SYSTEM PAUSED\n\n   PRESS 'P' TO RESUME", logic);
     }
 
-    // 5. 调试/模式信息（最前方显示）
-    if (aiMode && !isPaused) {
-        DrawTextEx(10, 10, "AI PILOT ACTIVE", CG_COLOR_GREEN);
-    }
     EndDrawing();
 }
 // main.cpp

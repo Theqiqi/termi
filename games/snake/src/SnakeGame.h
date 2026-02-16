@@ -4,6 +4,7 @@
 #include <vector>
 #include "ParticleSystem.hpp"
 
+
 struct Point { int x, y; };
 enum class Direction { UP, DOWN, LEFT, RIGHT };
 
@@ -36,7 +37,7 @@ public:
     void SyncScreenSize(int w, int h);
     int GetFrameDelay() const;
     bool IsSnakeAt (int x, int y)const;
-
+    int GetHighScore() const { return m_highScore; };
 #ifdef GAME_DEBUG
     // 测试专用：强制设置蛇的位置
     void _test_SetSnakeHead(int x, int y) {
@@ -75,6 +76,8 @@ private:
     Point food;
     bool gameOver; // gameOver 在前
     int score = 0;     // score 在中
+    int m_score = 0;
+    int m_highScore = 0; // 新增：记录最高分
     Direction dir; // dir 在后
     // 2. 在 Snake 类或 UI 类中增加粒子容器
     std::vector<Particle> particles;
