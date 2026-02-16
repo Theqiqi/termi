@@ -91,6 +91,7 @@ public:
     // 或者如果你想在食物位置爆发，也可以提供这个
     int GetFoodX() const { return food.x; }
     int GetFoodY() const { return food.y; }
+
 private:
     // SnakeGame.h
 private:
@@ -98,7 +99,7 @@ private:
     std::deque<Point> snake;
     Point food;
     bool gameOver; // gameOver 在前
-    int score;     // score 在中
+        int score = 0;     // score 在中
     Direction dir; // dir 在后
     // 2. 在 Snake 类或 UI 类中增加粒子容器
     std::vector<Particle> particles;

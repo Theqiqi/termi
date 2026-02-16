@@ -28,15 +28,19 @@ int main() {
         // 2. 逻辑更新 (分频执行，控制蛇速)
         // main.cpp 循环内部
 
-        if (++moveCounter >= 10) {
-            // 1. 执行逻辑更新，同时得知是否吃到东西
+        // 计算当前难度下的帧间隔
+        // 初始是 10 帧移动一次。每得 50 分，间隔减少 1 帧，最快减到 2 帧移动一次。
+        int currentScore = logic.getScore();
+        int frameDelay = 10 - (currentScore / 50);
+        if (frameDelay < 2) frameDelay = 2; // 设置一个极限速度，否则减到 0 游戏就没法玩了
+
+        // 2. 逻辑更新 (使用动态的 frameDelay)
+        if (++moveCounter >= frameDelay) {
             bool ateSomething = logic.Update();
-
-            // 2. 如果吃到了，就在蛇头当前位置（即食物消失处）放烟火
             if (ateSomething) {
-                // 这里的 15 是粒子数量，'.' 是粒子形状
-                ps.Emit((float)logic.GetHeadX(), (float)logic.GetHeadY(), 15, CG_COLOR_YELLOW);
-
+                // 速度越快（frameDelay 越小），粒子的数量越多，飞得越快
+                int intensity = 15 + (10 - frameDelay) * 5;
+                ps.Emit((float)logic.GetHeadX(), (float)logic.GetHeadY(), intensity, CG_COLOR_YELLOW);
             }
             moveCounter = 0;
         }
