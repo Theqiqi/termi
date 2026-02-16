@@ -83,7 +83,7 @@ void ClearBackground(void) {
 // --- 3. 高级绘图补全 ---
 
 // 矩形绘制：基于循环或底层的 line 函数
-void DrawRectangle(int x, int y, int width, int height, char ch) {
+void DrawRectangle(int x, int y, int width, int height,char ch) {
     if (!_context) return;
     for (int i = 0; i < height; ++i) {
         // 画横线：利用之前实现的 cg_draw_line 或直接写像素
@@ -92,11 +92,11 @@ void DrawRectangle(int x, int y, int width, int height, char ch) {
 }
 
 // 文本渲染：这在控制台中非常实用
-void DrawText(const char* text, int x, int y) {
+void DrawText(int x, int y,const char* text) {
     if (!_context || !text) return;
     int len = strlen(text);
     for (int i = 0; i < len; ++i) {
-        cg_draw_pixel(_context, x + i, y, text[i]);
+        DrawPixelEx( x + i, y,text[i],CG_COLOR_RESET);
     }
 }
 
@@ -107,18 +107,18 @@ bool IsKeyPressed(int key) {
 
 // --- 5. 像素与直线（简单的映射调用） ---
 // 兼容旧函数：让旧函数调用新接口，传入默认颜色
-void DrawPixel(int x, int y, char ch) {
+void DrawPixel( int x, int y,char ch) {
     DrawPixelEx(x, y, ch, CG_COLOR_RESET);
 }
 void DrawLine(int x1, int y1, int x2, int y2, char ch) {
     cg_draw_line(_context, x1, y1, x2, y2, ch);
 }
 
-void DrawPixelEx(int x, int y, char ch, const char* color) {
+void DrawPixelEx(int x, int y, char ch,const char* color) {
     if (_context) cg_draw_pixel_ex(_context, x, y, ch, color);
 }
 
-void DrawTextEx(int x, int y, const char* text, const char* color) {
+void DrawTextEx(int x, int y, const char* text,const char* color) {
     for (int i = 0; text[i] != '\0'; i++) {
         DrawPixelEx(x + i, y, text[i], color);
     }

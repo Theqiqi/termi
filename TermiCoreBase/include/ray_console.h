@@ -21,7 +21,7 @@ void DrawPixel(int x, int y, char ch);
 void DrawLine(int x1, int y1, int x2, int y2, char ch);
 void DrawRectangle(int x, int y, int width, int height, char ch);
 void DrawCircle(int centerX, int centerY, int radius, char ch);
-void DrawText(const char* text, int x, int y);
+void DrawText(int x, int y,const char* text);
 
 // 输入检测
 bool IsKeyPressed(int key);
@@ -33,8 +33,9 @@ int GetKeyPressed(void);
 // include/ray_console.h
 // 必须放在文件顶部，所有函数之外
 
-void DrawPixelEx(int x, int y, char ch, const char* color);
-void DrawTextEx(int x, int y, const char* text, const char* color);
+void DrawPixelEx(int x, int y,  char ch,const char* color);
+void DrawTextEx( int x, int y, const char* text,const char* color);
+
 
 void PlayConsoleSound(void);
 void SignalHandler(int sig);

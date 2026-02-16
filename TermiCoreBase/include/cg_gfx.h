@@ -37,10 +37,17 @@ void cg_draw_rect(ConsoleCanvas* canvas, int x, int y, int w, int h, char ch, bo
 void cg_draw_circle(ConsoleCanvas* canvas, int centerX, int centerY, int radius, char ch);
 // 增加颜色常量定义
 #define CG_COLOR_RESET  "\033[0m"
+
+#define CG_COLOR_BLACK  "\033[30m"
 #define CG_COLOR_RED    "\033[31m"
 #define CG_COLOR_GREEN  "\033[32m"
 #define CG_COLOR_YELLOW "\033[33m"
 #define CG_COLOR_BLUE   "\033[34m"
+#define CG_COLOR_MAGENTA "\033[35m"
+#define CG_COLOR_CYAN   "\033[36m"
+#define CG_COLOR_WHITE  "\033[37m"
+
+#define CG_COLOR_GRAY   "\033[90m"
 
 // 在绘图接口中增加颜色参数（或者创建一个新的 Ex 接口）
 void cg_draw_pixel_ex(ConsoleCanvas* canvas, int x, int y, char ch, const char* color);

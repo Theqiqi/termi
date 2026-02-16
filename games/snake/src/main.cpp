@@ -1,57 +1,144 @@
 #include "GameUI.h"
 #include "SnakeGame.h"
+#include "SnakeAI.h"
 
+bool fastMode = false;
+void SetupGame(SnakeGame& logic) {
+    // 确保拿到真实的终端大小
+    int w = GetScreenWidth();
+    int h = GetScreenHeight();
 
-// main.cpp
-int main() {
-    InitConsole(0, 0);
-    SetTargetFPS(60); // 渲染帧率保持高频
+    // 如果库还没准备好大小，给一个保底
+    if (w <= 0) w = 80;
+    if (h <= 0) h = 24;
 
-    SnakeGame logic(GetScreenWidth(), GetScreenHeight());
-    GameUI view;
+    logic.Reset(w, h); // 使用你刚写的 Reset 函数来初始化一切
+}
+void ProcessGameInput(SnakeGame& logic, bool& isPaused, bool& aiMode) {
+    int key = GetKeyPressed();
+    if (key == 'f' || key == 'F') fastMode = !fastMode;
+    if (key == 'p' || key == 'P') isPaused = !isPaused;
+    if (key == 'm' || key == 'M') aiMode = !aiMode;
 
-    int moveCounter = 0;
-    ParticleSystem ps;
-    while (!ConsoleWindowShouldClose()) {
-        int key = GetKeyPressed();
+    if (logic.IsGameOver() && (key == 'r' || key == 'R')) {
+        logic.Reset(GetScreenWidth() - 4, GetScreenHeight() - 3);
+        return;
+    }
 
-        // 27 是 Esc 的 ASCII 码
-        if (key == 'q' || key == 'Q' || key == 27) {
-            break;
-        }
-        // 1. 输入处理 (毫秒级响应)
+    // 只有在【非AI模式】下才处理 WASD
+    if (!isPaused && !logic.IsGameOver() && !aiMode) {
         if (IsKeyPressed('w')) logic.HandleInput(Direction::UP);
         if (IsKeyPressed('s')) logic.HandleInput(Direction::DOWN);
         if (IsKeyPressed('a')) logic.HandleInput(Direction::LEFT);
         if (IsKeyPressed('d')) logic.HandleInput(Direction::RIGHT);
+    }
+}
 
-        // 2. 逻辑更新 (分频执行，控制蛇速)
-        // main.cpp 循环内部
 
-        // 计算当前难度下的帧间隔
-        // 初始是 10 帧移动一次。每得 50 分，间隔减少 1 帧，最快减到 2 帧移动一次。
-        int currentScore = logic.getScore();
-        int frameDelay = 10 - (currentScore / 50);
-        if (frameDelay < 2) frameDelay = 2; // 设置一个极限速度，否则减到 0 游戏就没法玩了
+/**
+ * 运行一帧游戏逻辑
+ * @param logic 引用游戏逻辑对象
+ * @param ps 引用粒子系统，用于吃到食物时发射粒子
+ * @param moveCounter 引用主循环中的计数器，必须传引用以保持状态持久化
+ */
+/**
+ * 运行一帧游戏逻辑
+ */
+void RunGameLogicFrame(SnakeGame& logic, ParticleSystem& ps, int& moveCounter, bool aiMode) {
+    if (fastMode) moveCounter += 5;
+    else moveCounter += 1;
 
-        // 2. 逻辑更新 (使用动态的 frameDelay)
-        if (++moveCounter >= frameDelay) {
-            bool ateSomething = logic.Update();
-            if (ateSomething) {
-                // 速度越快（frameDelay 越小），粒子的数量越多，飞得越快
-                int intensity = 15 + (10 - frameDelay) * 5;
-                ps.Emit((float)logic.GetHeadX(), (float)logic.GetHeadY(), intensity, CG_COLOR_YELLOW);
-            }
-            moveCounter = 0;
+    if (moveCounter >= logic.GetFrameDelay()) {
+        // --- AI 模式下的唯一决策点 ---
+        if (aiMode) {
+            // 这里调用你测试通过的 CalculateBFSMove
+            logic.HandleInput(SnakeAI::CalculateBestMove(logic));
         }
 
-        // 3. 粒子系统每帧更新（60FPS），确保飞散过程平滑
-        ps.Update();
-        BeginDrawing();
-        // 4. 渲染
-        view.Draw(logic);
-        ps.Render();      // 粒子最后画，确保它们飘在蛇和墙的上方
-        EndDrawing();
+        bool ateSomething = logic.Update();
+        if (ateSomething) {
+            ps.Emit((float)logic.GetHeadX(), (float)logic.GetHeadY(), 15, CG_COLOR_YELLOW);
+        }
+        moveCounter = 0;
+    }
+}
+/**
+ * 执行完整的渲染序列
+ */
+void RenderFrame(const SnakeGame& logic, GameUI& view, ParticleSystem& ps, bool isPaused, bool aiMode) {
+
+    // 所有的渲染必须包裹在 Begin/End 之间
+    BeginDrawing();
+    ClearBackground();
+    // 1. 底层：游戏主体（食物、蛇、墙、分数、死亡特效）
+    view.Draw(logic);
+
+    // 2. 中层：如果游戏结束，注入崩塌粒子
+    if (logic.IsGameOver()) {
+        ps.EmitDeathExplosion(logic.GetWidth(), logic.GetHeight());
+    }
+
+    // 3. 粒子层：更新并渲染所有活跃粒子
+    ps.Update();
+    ps.Render();
+
+    // 4. 顶层 UI：状态遮罩和文字提示
+    if (logic.IsGameOver()) {
+        view.DrawOverlay(" [ SYSTEM FAILURE ] \n PRESS R TO REBOOT ", logic);
+    } else if (isPaused) {
+        view.DrawOverlay(" SYSTEM PAUSED ", logic);
+    }
+
+    // 5. 调试/模式信息（最前方显示）
+    if (aiMode && !isPaused) {
+        DrawTextEx(10, 10, "AI PILOT ACTIVE", CG_COLOR_GREEN);
+    }
+    EndDrawing();
+}
+// main.cpp
+int main() {
+    InitConsole(0, 0);
+    SetTargetFPS(60);
+
+    // 1. 启动时获取一次大小
+    int sw = GetScreenWidth();
+    int sh = GetScreenHeight();
+
+    // 给边缘留出安全余量
+    int logicW = sw - 6;
+    int logicH = sh - 4;
+
+    SnakeGame logic(logicW, logicH);
+    logic.Reset(logicW, logicH);
+
+    GameUI view;
+    ParticleSystem ps;
+
+    int moveCounter = 0;
+    bool isPaused = false;
+    bool aiMode = false;
+
+    while (!ConsoleWindowShouldClose()) {
+        if (IsKeyPressed(27)) break;
+
+        // --- 恢复动态同步：这是让墙壁随窗口动的关键 ---
+        int realW = GetScreenWidth();
+        int realH = GetScreenHeight();
+        // 逻辑大小永远紧跟物理窗口
+        logic.SyncScreenSize(realW - 4, realH - 3);
+
+        ProcessGameInput(logic, isPaused, aiMode);
+
+        if (!isPaused && !logic.IsGameOver()) {
+            // AI 的指令下达
+            if (aiMode && (moveCounter >= logic.GetFrameDelay())) {
+                // 这里的接口名要和你 SnakeAI 里的对上
+                logic.HandleInput(SnakeAI::CalculateFastMove(logic));
+            }
+            RunGameLogicFrame(logic, ps, moveCounter,aiMode);
+        }
+
+        RenderFrame(logic, view, ps, isPaused, aiMode);
     }
 
     CloseConsole();

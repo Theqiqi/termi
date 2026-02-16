@@ -3,6 +3,7 @@
 #include <vector>
 #include "ray_console.h" // 仅依赖游戏库 API
 #include <cstdio>
+#include <cstdlib>
 struct Particle {
     float x, y, vx, vy;
     int life;
@@ -46,6 +47,19 @@ public:
     }
     size_t GetCount() const {
         return particles.size();
+    }
+    /**
+ * 全屏爆炸特效：在屏幕随机位置生成大量下落的红色粒子
+ */
+    void EmitDeathExplosion(int width, int height) {
+        for (int i = 0; i < 50; i++) { // 每一帧生成 50 个新粒子
+            float rx = (float)(rand() % width);
+            float ry = (float)(rand() % height);
+
+            // 调用你现有的 Emit，但赋予它们随机的速度，模拟“崩塌”
+            // 红色粒子，向下掉落
+            this->Emit(rx, ry, 1, CG_COLOR_RED);
+        }
     }
 private:
     std::vector<Particle> particles;
