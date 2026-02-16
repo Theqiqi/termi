@@ -1,3 +1,5 @@
+#pragma once
+
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -41,15 +43,24 @@ public:
     int readKey() {
         unsigned char ch;
         ssize_t nread = read(STDIN_FILENO, &ch, 1);
+        if (nread <= 0) return 0;
 
-        if (nread == -1) {
-            // 在非阻塞模式下，如果没有数据可读，read 会返回 -1
-            // 且 errno 会被设置为 EAGAIN
-            if (errno == EAGAIN) return 0;
-            return -1; // 真正的错误
+        if (ch == 27) { // 发现 Esc
+            unsigned char next[2];
+            // 尝试以非阻塞方式再读两个字符
+            if (read(STDIN_FILENO, &next[0], 1) <= 0) return 27; // 后面没东西，真的是 Esc
+            if (read(STDIN_FILENO, &next[1], 1) <= 0) return 0;  // 只有部分序列，丢弃
+
+            if (next[0] == '[') {
+                switch (next[1]) {
+                    case 'A': return 'w'; // 将方向键上映射为 'w'
+                    case 'B': return 's'; // 方向键下
+                    case 'C': return 'd'; // 方向键右
+                    case 'D': return 'a'; // 方向键左
+                }
+            }
+            return 0; // 其他复杂的转义序列暂时忽略
         }
-
-        if (nread == 0) return 0; // 没读到数据
         return ch;
     }
 private:

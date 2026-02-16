@@ -3,6 +3,8 @@
 #define RAY_CONSOLE_H
 
 #include <stdbool.h>
+#include "cg_gfx.h"
+
 
 // 初始化与生命周期
 void InitConsole(int width, int height);
@@ -23,5 +25,17 @@ void DrawText(const char* text, int x, int y);
 
 // 输入检测
 bool IsKeyPressed(int key);
+int GetScreenWidth(void);
+int GetScreenHeight(void);
+void SetTargetFPS(int fps);
+int GetKeyPressed(void);
 
+// include/ray_console.h
+// 必须放在文件顶部，所有函数之外
+
+void DrawPixelEx(int x, int y, char ch, const char* color);
+void DrawTextEx(int x, int y, const char* text, const char* color);
+
+void PlayConsoleSound(void);
+void SignalHandler(int sig);
 #endif

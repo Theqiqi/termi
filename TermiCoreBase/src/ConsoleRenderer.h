@@ -1,54 +1,62 @@
+#ifndef CONSOLE_RENDER_H
+#define CONSOLE_RENDER_H
+
 #include <vector>
 #include <string>
 #include <iostream>
+#include <unistd.h>
+
+// 在 cg_gfx.cpp 内部
+struct Pixel {
+    char ch = ' ';
+    const char* color = "\033[0m"; // 默认颜色（重置符）
+};
 
 class ConsoleRenderer {
-public:
-    ConsoleRenderer(int w, int h) : width(w), height(h) {
-        // 初始化缓冲区，填充空格
-        buffer.assign(width * height, ' ');
-    }
-
-    // 调整缓冲区大小（对应 T1.3 的窗口变化）
-    void resize(int w, int h) {
-        width = w;
-        height = h;
-        buffer.assign(width * height, ' ');
-    }
-
-    // 在指定坐标设置字符
-    void draw_char(int x, int y, char ch) {
-        if (x >= 0 && x < width && y >= 0 && y < height) {
-            buffer[y * width + x] = ch;
-        }
-    }
-
-    // 清空缓冲区
-    void clear() {
-        std::fill(buffer.begin(), buffer.end(), ' ');
-    }
-
-    // 将缓冲区推送到屏幕
-    void render() {
-        // 1. 光标复位到左上角 (H) 并隐藏光标 (?25l)
-        std::string out = "\033[H\033[?25l";
-
-        // 2. 逐行拼接缓冲区内容
-        for (int i = 0; i < height; ++i) {
-            out.append(&buffer[i * width], width);
-            if (i < height - 1) out += '\n';
-        }
-
-        // 3. 一次性写入系统标准输出
-        write(STDOUT_FILENO, out.c_str(), out.size());
-    }
-
-    ~ConsoleRenderer() {
-        // 程序结束时显示光标
-        std::cout << "\033[?25h" << std::flush;
-    }
-
 private:
     int width, height;
-    std::vector<char> buffer;
+    std::vector<Pixel> buffer; // 升级为 Pixel 向量
+
+public:
+    ConsoleRenderer(int w, int h) : width(w), height(h) {
+        buffer.assign(width * height, {' ', "\033[0m"});
+    }
+
+    void resize(int w, int h) {
+        width = w; height = h;
+        buffer.assign(width * height, {' ', "\033[0m"});
+    }
+
+    void clear() {
+        std::fill(buffer.begin(), buffer.end(), Pixel{' ', "\033[0m"});
+    }
+    void draw_char(int x, int y, char ch) {
+        // 调用刚刚写好的新函数，颜色传入重置符
+        draw_char_ex(x, y, ch, CG_COLOR_RESET);
+    }
+    void draw_char_ex(int x, int y, char ch, const char* color) {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+            int idx = y * width + x;
+            buffer[idx].ch = ch;
+            buffer[idx].color = color ? color : "\033[0m";
+        }
+    }
+
+    void render() {
+        std::string out = "\033[H\033[?25l";
+        const char* lastColor = "\033[0m";
+
+        for (int i = 0; i < height * width; ++i) {
+            // 颜色优化：只有颜色变化时才插入 ANSI 码，大幅减少传输数据量
+            if (buffer[i].color != lastColor) {
+                out += buffer[i].color;
+                lastColor = buffer[i].color;
+            }
+            out += buffer[i].ch;
+            if ((i + 1) % width == 0) out += '\n';
+        }
+        out += "\033[0m"; // 结尾重置
+        write(STDOUT_FILENO, out.c_str(), out.size());
+    }
 };
+#endif //CONSOLE_RENDER_H

@@ -2,26 +2,24 @@ cmake_minimum_required(VERSION 3.21)
 project(TermiCoreBase)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-# -------------------------
-# 1. 定义库（内部 C++ 实现）
-# -------------------------
-# 现在是 header-only 库
-add_library(TermiCoreBase INTERFACE)
+# 统一设置输出路径 (相对于最顶层目录)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# 暴露 include 目录给外部
+# 定义库
+add_library(TermiCoreBase STATIC  # 明确指定为静态库
+        src/cg_gfx.cpp
+        src/ray_console.cpp
+)
+
+# 暴露接口
 target_include_directories(TermiCoreBase
-        PUBLIC INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
-        #PUBLIC include     # 对外暴露的 C API
-        #PRIVATE src        # 内部实现
+        PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# -------------------------
-# 2. 定义测试程序
-# -------------------------
-add_executable(console
-        tests/main.cpp
-)
-
+# 测试程序
+add_executable(console tests/main.cpp)
 target_link_libraries(console PRIVATE TermiCoreBase)

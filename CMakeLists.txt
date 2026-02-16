@@ -7,3 +7,4 @@ project ("clion")
 
 # Include sub-projects.
 add_subdirectory ("TermiCoreBase")
+add_subdirectory(games/snake)

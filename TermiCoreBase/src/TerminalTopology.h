@@ -1,3 +1,4 @@
+#pragma once
 #include <sys/ioctl.h>
 #include <signal.h>
 #include <atomic>
@@ -7,6 +8,7 @@ std::atomic<bool> screen_resized{true};
 
 // 信号处理回调函数
 void handle_resize(int sig) {
+    (void)sig;
     screen_resized.store(true);
 }
 

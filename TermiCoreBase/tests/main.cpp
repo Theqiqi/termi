@@ -1,25 +1,35 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include "TerminalGuard.h"
-#include "TerminalTopology.h"
+#include "cg_gfx.h"
+#include <cmath>
+
+#include "ray_console.h"
 
 int main() {
-    TerminalGuard guard; // 之前的 T1.1 & T1.2
-    TerminalTopology topology;
+    InitConsole(0, 0);
 
-    std::cout << "拓扑感知启动。请尝试拉伸终端窗口（按 'q' 退出）..." << std::endl;
+    int posX = 10;
+    while (!ConsoleWindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground();
 
-    while (true) {
-        if (topology.check_and_update()) {
-            std::cout << "\n[检测到窗口变化] 新分辨率: "
-                      << topology.get_width() << "x" << topology.get_height() << std::endl;
-        }
+        // 静态背景
+        DrawRectangle(2, 2, 20, 5, '#');
+        DrawText("ENGINE READY", 5, 4);
 
-        int key = guard.readKey();
-        if (key == 'q' || key == 'Q') break;
+        // 动态元素
+        DrawCircle(posX, 15, 4, '@');
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // 输入处理
+        if (IsKeyPressed('d')) posX++;
+        if (IsKeyPressed('a')) posX--;
+        if (IsKeyPressed('q')) break;
+
+        EndDrawing();
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
+
+    CloseConsole();
     return 0;
 }
