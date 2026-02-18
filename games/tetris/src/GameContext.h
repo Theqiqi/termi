@@ -30,6 +30,8 @@ struct GameContext {
     // --- 新增：用于下落动画 ---
     float dropAnimTimer = 0.0f;     // 动画剩余时间
     int rowOffsets[20] = {0};       // 每一行需要视觉偏移的格数
+    bool isWindowInvalid =false;
+    bool isAutoPausedBySize;
     // 清理本帧的所有临时标志
     void ResetFrameEvents() {
         lineClearedEvent = false;

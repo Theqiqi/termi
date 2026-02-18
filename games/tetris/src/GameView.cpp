@@ -3,6 +3,8 @@
 #include "shp.h"    // 包含 PIECE_DATA 表
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
+
 // 构造函数即 Init
 GameView::GameView() {
 
@@ -19,7 +21,9 @@ GameView::~GameView() {
         printf("Resources cleaned up automatically.\n");
 }
 
-void GameView::Render(const GameContext& ctx) {
+
+void GameView::Render(const GameContext& ctx){
+
         // 1. 正常绘制流程
         UpdateLayout(GetScreenWidth(), GetScreenHeight());
         ClearBackground();
@@ -397,30 +401,64 @@ void GameView::DrawBoardPixel(int logicX, int logicY, char symbol) {
 }
 
 void GameView::DrawEffects(const GameContext& ctx) {
+        // --- 第一部分：粒子物理模拟与渲染 ---
+        // 假设每帧约 0.016s (60fps)，实际可根据你程序的主循环传入 deltaTime
+        float dt = 0.016f;
+
+        for (auto it = m_particles.begin(); it != m_particles.end(); ) {
+                // 更新物理状态
+                it->x += it->vx;
+                it->y += it->vy;
+                it->vy += 0.4f; // 重力：让粒子往下掉
+                it->life -= dt;
+
+                if (it->life <= 0) {
+                        it = m_particles.erase(it);
+                } else {
+                        // 渲染粒子
+                        int px = (int)it->x;
+                        int py = (int)it->y;
+                        // 简单边界检查，防止粒子飞出屏幕导致 DrawPoint 报错
+                        if (py > 0 && py < 50 && px > 0 && px < 100) {
+                                DrawPoint(px, py, it->color, it->ch);
+                        }
+                        ++it;
+                }
+        }
+
+        // --- 第二部分：原有消行区域闪烁逻辑 ---
         if (ctx.lineClearTimer <= 0) return;
 
+        // 只有在消行刚开始的瞬间（第一帧），生成粒子
+        // 假设初始 timer 是 0.2f，在 0.19f 到 0.2f 之间触发一次生成
+        static float lastTimer = 0;
+        if (ctx.lineClearTimer > lastTimer && !ctx.linesToClear.empty()) {
+                for (int rowY : ctx.linesToClear) {
+                        CreateLineParticles(rowY, CG_COLOR_WHITE);
+                }
+        }
+        lastTimer = ctx.lineClearTimer;
+
+        // 以下是你原有的阶梯式闪烁代码
         const char* symbol = " ";
         const char* color = CG_COLOR_WHITE;
 
-        // 根据剩余时间阶段化效果
         if (ctx.lineClearTimer > 0.15f) {
-                symbol = "#"; // 瞬间闪白
+                symbol = "#";
                 color = CG_COLOR_WHITE;
         } else if (ctx.lineClearTimer > 0.08f) {
-                symbol = "*"; // 崩解成星号
+                symbol = "*";
                 color = CG_COLOR_GRAY;
         } else {
-                symbol = "."; // 最后化为尘埃
+                symbol = ".";
                 color = CG_COLOR_GRAY;
         }
 
         for (int y : ctx.linesToClear) {
                 for (int x = 0; x < 10; x++) {
                         int sx, sy;
-                        // 务必确保 MapLogicToScreen 在你这里的实现是带参数的或者能访问到 ctx
                         MapLogicToScreen(x, y, sx, sy);
-
-                        DrawPoint(sx,     sy, color, symbol[0]);
+                        DrawPoint(sx, sy, color, symbol[0]);
                         DrawPoint(sx + 1, sy, color, symbol[0]);
                 }
         }
@@ -452,6 +490,18 @@ void GameView::DrawOverlay(const GameContext& ctx) {
                 DrawModalBox(5, 8, 30, 6, CG_COLOR_YELLOW);
                 DrawTextEx(14, 10, " PAUSED ", CG_COLOR_YELLOW);
                 DrawTextEx(8, 11, " Press P to Resume ", CG_COLOR_WHITE);
+        }
+        // 增加：窗口太小强制警告
+        if (IsLayoutInvalid()) {
+                // 清理全屏，只显示警告（可选）
+                ClearBackground();
+
+                const char* msg = "!!! WINDOW TOO SMALL !!!";
+                const char* hint = "Please resize the console to continue.";
+
+                // 放在屏幕绝对坐标 (0, 0) 附近，确保玩家能看见
+                DrawTextEx(2, 2, msg, CG_COLOR_RED);
+                DrawTextEx(2, 3, hint, CG_COLOR_YELLOW);
         }
 }
 
@@ -531,4 +581,36 @@ void GameView::DrawTextCentered(int centerX, int y, const char* text, const char
         // 这里的 centerX 是物理坐标（字符位）
         int sx = centerX - (len / 2);
         DrawTextEx(sx, y, text, color);
+}
+void GameView::CreateLineParticles(int logicY, const char* color) {
+        for (int x = 0; x < 10; x++) {
+                int sx, sy;
+                MapLogicToScreen(x, logicY, sx, sy);
+
+                // 每个方块生成 2 个粒子
+                for (int i = 0; i < 2; i++) {
+                        Particle p;
+                        p.x = (float)sx + (i % 2);
+                        p.y = (float)sy;
+
+                        // 随机初速度：向左右迸射，并向上弹起
+                        p.vx = ((float)(rand() % 100) - 50.0f) * 0.15f;
+                        p.vy = -((float)(rand() % 60)) * 0.1f;
+
+                        p.life = 0.6f; // 存活约 0.6 秒
+                        p.color = color;
+                        p.ch = (rand() % 2 == 0) ? '*' : '.';
+                        m_particles.push_back(p);
+                }
+        }
+}
+
+bool GameView::IsLayoutInvalid() const {
+        return (GetScreenWidth() < 42 || GetScreenHeight() < 25);
+}
+
+void GameView::DrawSizeWarning() {
+        ClearBackground();
+        DrawTextEx(2, 2, "!!! WINDOW TOO SMALL !!!", CG_COLOR_RED);
+        // ... 其他提示文字
 }

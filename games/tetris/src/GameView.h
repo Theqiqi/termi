@@ -2,7 +2,11 @@
 #pragma once
 #include "cg_gfx.h"
 #include "GameContext.h"
+#include <vector>
 
+namespace {
+    struct Particle;
+}
 class GameView {
 public:
     // 1. 生命周期管理
@@ -10,10 +14,11 @@ public:
     GameView();
     // 恢复控制台默认设置
     ~GameView();
-
     // 2. 核心渲染接口
     // 这是 main 函数唯一需要调用的绘制函数
     void Render(const GameContext& ctx);
+    bool IsLayoutInvalid() const;
+    void DrawSizeWarning();
 
 //private:
 public:
@@ -71,9 +76,11 @@ public:
     void DrawBoardPixel(int logicX, int logicY, char symbol);
     void UpdateLayout(int screenWidth, int screenHeight);
     void CheckWindowSize();
-
+    void CreateLineParticles(int logicY, const char* color);
 private:
 
+    // 在 GameView 类私有成员中添加
+    std::vector<Particle> m_particles;
     const char* currentDrawingColor=CG_COLOR_WHITE;
 };
 
@@ -89,4 +96,12 @@ namespace {
     const int BOARD_LOGIC_W = 10;
     const int BOARD_PHYSIC_W = 20; // 10格 * 2字符
     const int BOARD_HEIGHT = 20;
+    struct Particle {
+        float x, y;
+        float vx, vy;
+        float life;
+        const char* color;
+        char ch;
+    };
+
 }

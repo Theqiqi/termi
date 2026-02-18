@@ -11,6 +11,7 @@ class AudioManager {
 public:
     // 只传入 ctx 引用，纯读取，不修改
     void Update(const GameContext& ctx) {
+
         // 1. 捕捉消行瞬间
         if (ctx.lineClearedEvent) {
             // 这里可以根据 ctx.linesToClear.size() 播放不同音效
@@ -37,29 +38,58 @@ public:
         m_logic.Reset(m_ctx);
 
     }
-    void Run() {
+    void ProcessGameFrame(float dt) {
+        // 1. 输入
+        m_input.ProcessInput(m_ctx, m_logic);
 
-
-        while (!ConsoleWindowShouldClose() && !m_ctx.shouldExit) {
-            //printf("Key: %d\n", GetKeyPressed());
-            float dt = m_ticker.Tick();
-            m_logic.Update(m_ctx, dt);        // 核心重力与逻辑
-
-            // 1. 输入处理
-            m_input.ProcessInput(m_ctx, m_logic);
-
-            // 2. 状态更新（核心逻辑）
+        // 2. 逻辑更新
+        if (!m_ctx.isPaused) {
             m_logic.Update(m_ctx, dt);
             m_ctx.ghostY = m_logic.CalculateLandY(m_ctx);
-            // 3. 后处理（这就是你说的状态清理封装）
-            PostUpdate();
+        }
 
-            // 4. 表现层
-            m_audio.Update(m_ctx);
+        // 3. 表现与后处理
+        m_audio.Update(m_ctx);
+        PostUpdate();
 
-            BeginDrawing();
-            m_view.Render(m_ctx);
-            EndDrawing();
+        // 4. 渲染
+        BeginDrawing();
+        m_view.Render(m_ctx);
+        EndDrawing();
+    }
+    void UpdateSystemState() {
+        // 询问 View 窗口行不行
+        m_ctx.isWindowInvalid = m_view.IsLayoutInvalid();
+
+        if (m_ctx.isWindowInvalid) {
+            if (!m_ctx.isPaused) {
+                m_ctx.isPaused = true;
+                m_ctx.isAutoPausedBySize = true; // 标记是系统干的
+            }
+        } else {
+            // 窗口正常了，如果是系统刚才停的，就自动开
+            if (m_ctx.isAutoPausedBySize) {
+                m_ctx.isPaused = false;
+                m_ctx.isAutoPausedBySize = false;
+            }
+        }
+    }
+    void Run() {
+        while (!ConsoleWindowShouldClose() && !m_ctx.shouldExit) {
+            float dt = m_ticker.Tick();
+
+            // 1. 系统级检测（放在最前面，决定本帧走哪条路）
+            UpdateSystemState();
+
+            if (m_ctx.isWindowInvalid) {
+                // 走“警告”渲染路径
+                BeginDrawing();
+                m_view.DrawSizeWarning();
+                EndDrawing();
+            } else {
+                // 走“正常”游戏路径
+                ProcessGameFrame(dt);
+            }
         }
     }
 

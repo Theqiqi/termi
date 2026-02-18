@@ -26,7 +26,6 @@ if (ctx.fallTimer >= ctx.fallSpeed) {
 }
 */
 
-
 void GameLogic::Update(GameContext& ctx, float dt) {
 
     if (ctx.isGameOver) return;
