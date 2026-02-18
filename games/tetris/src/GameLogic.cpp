@@ -316,4 +316,51 @@ void GameLogic::ApplyScoreAndFeedback(GameContext& ctx, int lines) {
     float newInterval = 0.5f * pow(0.9f, (float)ctx.score / 1000.0f);
     ctx.dropInterval = (newInterval < 0.1f) ? 0.1f : newInterval;
 }
+bool GameLogic::IsPositionValid(int x, int y, int r, const int board[20][10]) {
+    shp::Point pts[4];
+    // 这里调用你之前的 shp 数据获取函数
+    // 假设 ctx.curType 在这里是可知的，或者你需要把 type 也传进来
+    // 为了 AI 方便，建议把 type 也作为参数，或者从 ctx 取
+    // 暂时假设我们还是处理当前正在下落的 type
+    // shp::Get(ctx.curType, r, pts);
 
+    for (int i = 0; i < 4; i++) {
+        int targetX = x + pts[i].x;
+        int targetY = y + pts[i].y;
+
+        // 1. 检查左右边界
+        if (targetX < 0 || targetX >= 10) return false;
+
+        // 2. 检查底部边界
+        if (targetY >= 20) return false;
+
+        // 3. 检查是否与已有方块重叠 (targetY < 0 时是在屏幕上方，不算碰撞)
+        if (targetY >= 0) {
+            if (board[targetY][targetX] > 0) return false;
+        }
+    }
+    return true;
+}
+int GameLogic::SimulateDrop(const GameContext& ctx, int x, int r, int tempBoard[20][10]) {
+    // 1. 检查初始位置是否合法
+    if (!IsPositionValid(x, ctx.curY, r, tempBoard)) return -1;
+
+    // 2. 模拟下落直到碰撞
+    int y = ctx.curY;
+    while (IsPositionValid(x, y + 1, r, tempBoard)) {
+        y++;
+    }
+
+    // 3. 将方块“虚构”写入模拟棋盘
+    shp::Point pts[4];
+    shp::Get(ctx.curType, r, pts);
+    for (int i = 0; i < 4; i++) {
+        int targetX = x + pts[i].x;
+        int targetY = y + pts[i].y;
+        if (targetY >= 0 && targetY < 20) tempBoard[targetY][targetX] = 1;
+    }
+
+    // 4. 计算并清理模拟消行（AI 喜欢消行）
+    // ... 这里可以简化，只需返回 y 即可
+    return y;
+}

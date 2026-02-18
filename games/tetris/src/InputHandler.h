@@ -44,42 +44,34 @@ public:
     }
 
 #endif
-    // 将输入转换为对逻辑层的具体指令
-    void ProcessInput(GameContext& ctx, GameLogic& logic) {
-        // 1. 获取当前这一帧的按键
-        int key = GetKeyPressed();
-        if (key <= 0) return; // 没按键直接返回
 
-        // 2. 基础控制
-        if (key == 27) { ctx.shouldExit = true; return; }
-        if (key == 'p' || key == 'P') { ctx.isPaused = !ctx.isPaused; return; }
-        if (ctx.isGameOver) {
-            if (key == 'r' || key == 'R') logic.Reset(ctx);
-            return;
+        // 处理退出、暂停、AI切换等全局键
+    void ProcessSystemKeys(GameContext& ctx, int key) {
+
+        if (key == 27) ctx.shouldExit = true;
+        if (key == 'p' || key == 'P') ctx.isPaused = !ctx.isPaused;
+        if (key == 'm' || key == 'M') ctx.isAIMode = !ctx.isAIMode;
+            if (ctx.isGameOver && (key == 'r' || key == 'R')) /* 触发重启 */;
         }
-        if (ctx.isPaused || ctx.lineClearTimer > 0) return;
 
-        // 3. 响应移动（使用 TryMove 彻底解决穿墙）
-        // 注意：这里直接用 key 匹配，不重复写 if
+        // 仅在手动玩游戏时调用
+    void ProcessGameKeys(GameContext& ctx, GameLogic& logic, int key) {
+        if (key <= 0) return;
+
         switch (key) {
-            case KEY_LEFT:  case 'a': case 'A':
-                logic.Move(ctx, -1, 0);
-                break;
-            case KEY_RIGHT: case 'd': case 'D':
-                logic.Move(ctx, 1, 0);
-                break;
-            case KEY_DOWN:  case 's': case 'S':
-                logic.Move(ctx, 0, 1);
-                break;
-            case KEY_UP:    case 'w': case 'W':
-                logic.TryRotate(ctx);
-                break;
-            case KEY_SPACE: // 这里已经包含了 ' ' (32)，不要再重复写 case ' ':
-                logic.HardDrop(ctx);
-                break;
-            case 'f': case 'F':
-                ctx.score += 1000;
-                break;
+            // 方向键扩展值
+            case KEY_LEFT:  logic.Move(ctx, -1, 0); break;
+            case KEY_RIGHT: logic.Move(ctx, 1, 0);  break;
+            case KEY_DOWN:  logic.Move(ctx, 0, 1);  break;
+            case KEY_UP:    logic.TryRotate(ctx);   break;
+
+                // 兼容小写字母
+            case KEY_a: case KEY_A: logic.Move(ctx, -1, 0); break;
+            case KEY_d: case KEY_D: logic.Move(ctx, 1, 0);  break;
+            case KEY_s: case KEY_S: logic.Move(ctx, 0, 1);  break;
+            case KEY_w: case KEY_W: logic.TryRotate(ctx);   break;
+
+            case KEY_SPACE: logic.HardDrop(ctx); break;
         }
 
 #ifdef GAME_DEBUG

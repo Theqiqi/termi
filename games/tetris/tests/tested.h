@@ -40,7 +40,7 @@ void Test_True_Wall_Collision() {
     ctx.curX = -1;
 
     // 2. 尝试再往左移到 -2
-    bool result = logic.TryMove(ctx, -1, 0);
+    bool result = logic.Move(ctx, -1, 0);
 
     // 3. 计算：nextX(-2) + point.x(1) = -1
     // 此时 targetX < 0 成立！
@@ -68,7 +68,7 @@ void Test_LockToBoard_Logic() {
     ctx.curY = 18;
 
     // 4. 执行下落动作
-    bool canMoveDown = logic.TryMove(ctx, 0, 1);
+    bool canMoveDown = logic.Move(ctx, 0, 1);
 
     // 5. 逻辑判定：如果不能下落，则执行固化
     if (canMoveDown == false) {
@@ -108,7 +108,7 @@ void Test_Spawn_New_Piece_V2() {
     // 1. 模拟方块已经到底部，且下方是空的物理边界（20行）
     ctx.curPieceType = 1;
     ctx.curX = 4;
-    while(logic.TryMove(ctx, 0, 1)) { ctx.curY++; }
+    while(logic.Move(ctx, 0, 1)) { ctx.curY++; }
 
     // 2. 确保不会触发消行 (清空底行)
     for(int x=0; x<10; x++) ctx.board[19][x] = 0;
@@ -134,10 +134,10 @@ void Test_Logic_Rules_V2() {
         ctx.curX = 5; // 先放在中间
 
         // 一直往左移，直到撞墙
-        while(logic.TryMove(ctx, -1, 0)) { ctx.curX--; }
+        while(logic.Move(ctx, -1, 0)) { ctx.curX--; }
 
         // 此时已经在最左了，尝试再往左移动 -1
-        bool canMoveLeftAgain = logic.TryMove(ctx, -1, 0);
+        bool canMoveLeftAgain = logic.Move(ctx, -1, 0);
         assert(canMoveLeftAgain == false);
         printf("[PASS] Left wall collision detection.\n");
     }
@@ -154,10 +154,10 @@ void Test_Logic_Rules_V2() {
         ctx.board[15][6] = 1; // 考虑到方块宽度，多放几个点确保撞上
 
         // 自动下落直到撞到障碍物
-        while(logic.TryMove(ctx, 0, 1)) { ctx.curY++; }
+        while(logic.Move(ctx, 0, 1)) { ctx.curY++; }
 
         // 断言：此时 curY 应该在障碍物上方，不能再往下
-        assert(logic.TryMove(ctx, 0, 1) == false);
+        assert(logic.Move(ctx, 0, 1) == false);
         printf("[PASS] Bottom obstacle collision detection.\n");
     }
 }

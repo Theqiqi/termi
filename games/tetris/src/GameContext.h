@@ -37,4 +37,14 @@ struct GameContext {
         lineClearedEvent = false;
         // 其他标志...
     }
+    //ai
+    bool isAIMode;
+    bool isWPressed;
+    bool isBPressed;
+    int rotation ;
+    bool isDPressed ;
+    bool isAPressed;
+    bool isSpacePressed;
+    bool curType;
+
 };

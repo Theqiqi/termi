@@ -12,6 +12,11 @@ set(LIB_SOURCES
         src/GameLogic.cpp
         src/GameView.cpp
         src/shp.h
+        src/AIController.cpp
+        src/AIController.h
+        src/GameEngine.cpp
+        src/GameEngine.h
+
 )
 
 # 2. 创建逻辑静态库

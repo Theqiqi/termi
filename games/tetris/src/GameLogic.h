@@ -32,10 +32,14 @@ public:
     bool TryRotate(GameContext& ctx);
     // 硬降：直接坠落到底部
     void HardDrop(GameContext& ctx);
-
+    //ai
+    int SimulateDrop(const GameContext& ctx, int x, int r, int tempBoard[20][10]);
+    bool IsPositionValid(int x, int y, int r, const int board[20][10]);
+    bool IsPositionValid(const GameContext& ctx, int x, int y, int r) {
+        return IsPositionValid(x, y, r, ctx.board);
+    }
 //private:
 public :
-
 
     // 生成新方块
     // 生成新方块：随机设置 ctx.activePiece，并检查是否一生成就碰撞（Game Over）
@@ -60,5 +64,6 @@ public :
     bool HandleLineClearAnimation(GameContext& ctx, float dt);
     void ProcessGravityStep(GameContext& ctx);
     void ApplyScoreAndFeedback(GameContext& ctx, int lines);
+
 };
 
