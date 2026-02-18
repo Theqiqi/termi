@@ -45,15 +45,6 @@ public:
 
 #endif
 
-        // 处理退出、暂停、AI切换等全局键
-    void ProcessSystemKeys(GameContext& ctx, int key) {
-
-        if (key == 27) ctx.shouldExit = true;
-        if (key == 'p' || key == 'P') ctx.isPaused = !ctx.isPaused;
-        if (key == 'm' || key == 'M') ctx.isAIMode = !ctx.isAIMode;
-            if (ctx.isGameOver && (key == 'r' || key == 'R')) /* 触发重启 */;
-        }
-
         // 仅在手动玩游戏时调用
     void ProcessGameKeys(GameContext& ctx, GameLogic& logic, int key) {
         // 此时 key 是由 Engine 传进来的，不要在函数内部 GetKeyPressed()

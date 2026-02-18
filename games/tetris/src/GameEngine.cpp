@@ -61,6 +61,7 @@ void GameEngine::ProcessGameFrame(float dt) {
     GenerateFeedback();
 }
 void GameEngine::ExecuteAIDecision() {
+    if (m_ctx.lineClearTimer > 0) return;
     if (!m_ctx.hasAIDecision) return;
 
     // 快速模式逻辑
@@ -129,66 +130,34 @@ void GameEngine::HandleAILogic(float dt) {
     }
 }
 void GameEngine::GatherInput() {
-
-    // 关键点 A：本帧唯一一次按键抓取
     int rawKey = GetKeyPressed();
-    if (rawKey <= 0) return; // 没按键直接走，节省 CPU
+    if (rawKey <= 0) return;
 
-    // --- 第一层：系统级绝对优先级 (不受任何 isPaused 或 isGameOver 影响) ---
+    // --- 第一级：系统级（无视一切状态） ---
+    if (rawKey == 27) { m_ctx.shouldExit = true; return; }
+    if (rawKey == 'r' || rawKey == 'R') { m_logic.Reset(m_ctx); return; }
+    if (rawKey == 'p' || rawKey == 'P') { m_ctx.isPaused = !m_ctx.isPaused; return; }
 
-    // 1. ESC 退出
-    if (rawKey == 27) {
-        m_ctx.shouldExit = true;
-        LogSystem::Log("System: EXIT Requested");
-        return;
-    }
-
-    // 2. R 重置 (必须在最前面，这样死了也能重开)
-    if (rawKey == KEY_R || rawKey == 'r' || rawKey == 'R') {
-        LogSystem::Log("System: RESET Requested");
-        m_logic.Reset(m_ctx);
-        return; // 重置后立刻结束，防止本帧按键影响新开的一局
-    }
-
-    // 3. P 暂停
-    if (rawKey == KEY_P || rawKey == 'p' || rawKey == 'P') {
-        m_ctx.isPaused = !m_ctx.isPaused;
-        LogSystem::Log(m_ctx.isPaused ? "System: PAUSE ON" : "System: PAUSE OFF");
-        return; // 暂停切换完也要 return，防止暂停瞬间方块还被操作
-    }
-
-
-    if (rawKey == KEY_N || rawKey == 'n' || rawKey == 'N') {
-        if (m_ctx.aiSpeedMode == AI_INSTANT) {
-            m_ctx.aiSpeedMode = AI_SMOOTH;
-            LogSystem::Log("AI Speed: SMOOTH");
-        } else {
-            m_ctx.aiSpeedMode = AI_INSTANT;
-            LogSystem::Log("AI Speed: INSTANT");
-        }
-        // 【关键】切换速度时，重置计时器，防止瞬间爆发
-        m_ctx.aiTimer = 0;
-        return;
-    }
-    // 4. M 模式切换
-    if (rawKey == KEY_M || rawKey == 'm' || rawKey == 'M') {
+    // AI 模式切换：在这里直接修改，不要进 InputHandler
+    if (rawKey == 'm' || rawKey == 'M') {
         m_ctx.isAIMode = !m_ctx.isAIMode;
-        // 【关键】切换模式时，重置决策状态，防止拿旧的决策去跑新模式
-        m_ctx.hasAIDecision = false;
-        m_ctx.lastThinkPieceID = -1; // 强制重新思考
-        m_ctx.aiTimer = 0;
-        LogSystem::Log(m_ctx.isAIMode ? "AI MODE ON" : "AI MODE OFF");
+        m_ctx.hasAIDecision = false; // 切换瞬间重置 AI 思考
         return;
     }
-    // --- 第二层：逻辑拦截 (暂停或死亡时，严禁操作方块) ---
+
+    // --- 第二级：状态拦截 ---
+    // 重点：只要在消行、暂停、结束，后面所有的按键（包括 AI 调速）全部作废
     if (m_ctx.isPaused || m_ctx.isGameOver || m_ctx.lineClearTimer > 0) {
         return;
     }
 
-    // --- 第三层：游戏内控制 (仅手动模式) ---
-    if (!m_ctx.isAIMode) {
-        // 这里只处理上下左右和空格
-        // 注意：不要再让 ProcessGameKeys 内部去调用 GetKeyPressed() 了！
+    // --- 第三级：分发逻辑 ---
+    if (m_ctx.isAIMode) {
+        // AI 模式专属：只处理 1 和 2 调速
+        if (rawKey == '1') m_ctx.aiSpeedMode = AI_SMOOTH;
+        if (rawKey == '2') m_ctx.aiSpeedMode = AI_INSTANT;
+    } else {
+        // 手动模式：交给剥离后的 InputHandler
         m_input.ProcessGameKeys(m_ctx, m_logic, rawKey);
     }
 }

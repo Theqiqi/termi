@@ -54,6 +54,7 @@ void GameView::Render(const GameContext& ctx){
         // 再次加固四个关键角点
         DrawPoint(sepX, startY + frameHeight, CG_COLOR_BLUE, '#');
         DrawPoint(startX + frameWidth - 1, startY + frameHeight, CG_COLOR_BLUE, '#');
+
 }
 // --- 布局组件 ---
 void GameView::DrawGameLayout() {
@@ -83,56 +84,64 @@ void GameView::DrawGameContent(const GameContext& ctx) {
 }
 // --- 信息区核心 ---
 void GameView::DrawInfoPanel(const GameContext& ctx) {
-        // 假设 frameWidth 是 40, sepX 是中隔墙
         int startX = BOARD_OFFSET_X - 2;
         int frameWidth = 40;
         int rightWallX = startX + frameWidth - 1;
         int sepX = BOARD_OFFSET_X + 20;
-
-        // 真正的右侧面板中心点 = (中隔墙 + 右外墙) / 2
         int centerX = (sepX + rightWallX) / 2;
 
         // --- 1. SCORE ---
         DrawTextCentered(centerX, BOARD_OFFSET_Y + 1, "SCORE", CG_COLOR_CYAN);
         char buf[16];
         sprintf(buf, "%06d", ctx.score);
-        DrawTextEx(centerX - 3, BOARD_OFFSET_Y + 2, buf, CG_COLOR_WHITE); // 数字长度6，左移3实现居中
+        DrawTextEx(centerX - 3, BOARD_OFFSET_Y + 2, buf, CG_COLOR_WHITE);
 
         // --- 2. NEXT ---
-        DrawTextCentered(centerX, BOARD_OFFSET_Y + 5, "NEXT", CG_COLOR_CYAN);
-        // 这里的 centerX 传入后，DrawNextPieceCentered 内部会处理方块的物理宽度偏移
-        DrawNextPieceCentered(centerX, BOARD_OFFSET_Y + 7, ctx.nextPieceType);
+        DrawTextCentered(centerX, BOARD_OFFSET_Y + 4, "NEXT", CG_COLOR_CYAN);
+        DrawNextPieceCentered(centerX, BOARD_OFFSET_Y + 6, ctx.nextPieceType);
 
-        // --- 3. STATUS ---
-        DrawTextCentered(centerX, BOARD_OFFSET_Y + 11, "STATUS", CG_COLOR_CYAN);
-        const char* st = ctx.isGameOver ? "GAME OVER" : (ctx.isPaused ? "PAUSED" : "PLAYING");
-        const char* stCol = ctx.isGameOver ? CG_COLOR_RED : (ctx.isPaused ? CG_COLOR_YELLOW : CG_COLOR_GREEN);
-        // 状态文字居中，直接用 DrawTextCentered 即可
-        DrawTextCentered(centerX, BOARD_OFFSET_Y + 12, st, stCol);
+        // --- 3. STATUS & MODE ---
+        DrawTextCentered(centerX, BOARD_OFFSET_Y + 10, "STATUS", CG_COLOR_CYAN);
+        const char* st = ctx.isGameOver ? "GAME OVER" : (ctx.isPaused ? "PAUSED" : (ctx.isAIMode ? "AI RUNNING" : "MANUAL"));
+        const char* stCol = ctx.isGameOver ? CG_COLOR_RED : (ctx.isPaused ? CG_COLOR_YELLOW : (ctx.isAIMode ? CG_COLOR_MAGENTA : CG_COLOR_GREEN));
+        DrawTextCentered(centerX, BOARD_OFFSET_Y + 11, st, stCol);
 
-        // --- 4. CONTROLS ---
-        DrawControlsCentered(centerX, BOARD_OFFSET_Y + 15);
+        // 如果是 AI 模式，显示当前速度档位
+        if (ctx.isAIMode) {
+                const char* speedStr = (ctx.aiSpeedMode == 1) ? "MODE: INSTANT" : "MODE: NORMAL";
+                DrawTextCentered(centerX, BOARD_OFFSET_Y + 12, speedStr, CG_COLOR_GRAY);
+        }
+
+        // --- 4. CONTROLS (动态切换) ---
+        DrawControlsCentered(centerX, BOARD_OFFSET_Y + 15, ctx);
 }
-void GameView::DrawControlsCentered(int centerX, int y) {
+
+
+// 记得在 GameView.h 中把参数改成 (int centerX, int y, const GameContext& ctx)
+void GameView::DrawControlsCentered(int centerX, int y, const GameContext& ctx)  {
         DrawTextCentered(centerX, y, "CONTROLS", CG_COLOR_CYAN);
 
-        // 关键修正：不要只根据 centerX 偏移
-        // 假设 sepX 是中隔墙坐标，我们必须保证 listX > sepX
         int sepX = BOARD_OFFSET_X + 20;
-
-        // 重新计算起始点：取 (中心点-7) 和 (隔墙+2) 的最大值，防止撞墙
         int listX = centerX - 8;
         if (listX <= sepX) listX = sepX + 2;
 
         const char* c = CG_COLOR_YELLOW;
 
-        // 缩短说明文字，确保不会撞到右侧外墙 (#)
-        // 注意：控制台字符宽度有限，说明文字要简练
-        DrawTextEx(listX, y + 1, "W      : ROTATE", c);
-        DrawTextEx(listX, y + 2, "A,D    : MOVE",   c);
-        DrawTextEx(listX, y + 3, "S      : DROP",   c);
-        DrawTextEx(listX, y + 4, "SPACE  : HARD",   c);
-        DrawTextEx(listX, y + 5, "P      : PAUSE",  c);
+        if (ctx.isAIMode) {
+                // AI 模式下的快捷键
+                DrawTextEx(listX, y + 1, "M      : MANUAL", c);
+                DrawTextEx(listX, y + 2, "1      : NORMAL", c);
+                DrawTextEx(listX, y + 3, "2      : INSTANT", c);
+                DrawTextEx(listX, y + 4, "R      : RESET",  c);
+                DrawTextEx(listX, y + 5, "P      : PAUSE",  c);
+        } else {
+                // 手动模式下的快捷键
+                DrawTextEx(listX, y + 1, "W      : ROTATE", c);
+                DrawTextEx(listX, y + 2, "A,D    : MOVE",   c);
+                DrawTextEx(listX, y + 3, "SPACE  : HARD",   c);
+                DrawTextEx(listX, y + 4, "M      : AI MODE",c);
+                DrawTextEx(listX, y + 5, "P      : PAUSE",  c);
+        }
 }
 void GameView::DrawControlsPanel(int centerX, int y) {
         const char* kColor = CG_COLOR_YELLOW;

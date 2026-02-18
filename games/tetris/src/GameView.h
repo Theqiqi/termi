@@ -56,7 +56,7 @@ public:
     void DrawControlsPanel(int x, int y) ;
     void DrawNextPieceInPanel(int x, int y, int type);
     void DrawNextPieceCentered(int centerX, int y, int type);
-    void DrawControlsCentered(int centerX, int y);
+    void DrawControlsCentered(int centerX, int y, const GameContext& ctx);
     void DrawTextCentered(int centerX, int y, const char* text, const char* color);
     //1.得分区
     void DrawScorePanel(const GameContext& ctx);

@@ -48,7 +48,7 @@ struct GameContext {
     bool isSpacePressed;
     bool curType;
 
-    AISpeed aiSpeedMode = AI_INSTANT; // 默认快速
+    AISpeed aiSpeedMode = AI_SMOOTH; // 默认快速
     // AI 决策缓存
     bool hasAIDecision = false;
     int cachedTargetX = 0;
