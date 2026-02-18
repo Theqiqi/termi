@@ -4,9 +4,7 @@
 #include "GameContext.h"
 #include <vector>
 
-namespace {
-    struct Particle;
-}
+
 class GameView {
 public:
     // 1. 生命周期管理
@@ -78,13 +76,16 @@ public:
     void CheckWindowSize();
     void CreateLineParticles(int logicY, const char* color);
 private:
-
+    struct Particle {
+        float x, y;
+        float vx, vy;
+        float life;
+        const char* color;
+        char ch;
+    };
     // 在 GameView 类私有成员中添加
     std::vector<Particle> m_particles;
     const char* currentDrawingColor=CG_COLOR_WHITE;
-};
-
-namespace {
     // 基础偏移（由 UpdateLayout 动态更新）
     int BOARD_OFFSET_X = 2;
     int BOARD_OFFSET_Y = 1;
@@ -96,12 +97,9 @@ namespace {
     const int BOARD_LOGIC_W = 10;
     const int BOARD_PHYSIC_W = 20; // 10格 * 2字符
     const int BOARD_HEIGHT = 20;
-    struct Particle {
-        float x, y;
-        float vx, vy;
-        float life;
-        const char* color;
-        char ch;
-    };
 
-}
+
+};
+
+
+
