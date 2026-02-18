@@ -1,0 +1,117 @@
+// 完整 ASCII 键盘映射 + 扩展键
+// C 语言风格 ASCII 键盘映射 + 扩展键
+enum Key {
+    // 控制字符（0–31）
+    KEY_NUL = 0,
+    KEY_SOH,
+    KEY_STX,
+    KEY_ETX,
+    KEY_EOT,
+    KEY_ENQ,
+    KEY_ACK,
+    KEY_BEL,
+    KEY_BACKSPACE,
+    KEY_TAB,
+    KEY_LF,
+    KEY_VT,
+    KEY_FF,
+    KEY_CR,
+    KEY_SO,
+    KEY_SI,
+    KEY_DLE,
+    KEY_DC1,
+    KEY_DC2,
+    KEY_DC3,
+    KEY_DC4,
+    KEY_NAK,
+    KEY_SYN,
+    KEY_ETB,
+    KEY_CAN,
+    KEY_EM,
+    KEY_SUB,
+    KEY_ESC,
+    KEY_FS,
+    KEY_GS,
+    KEY_RS,
+    KEY_US,
+
+    // 可打印字符（32–126）
+    KEY_SPACE = 32,
+    KEY_EXCLAMATION,
+    KEY_QUOTE,
+    KEY_HASH,
+    KEY_DOLLAR,
+    KEY_PERCENT,
+    KEY_AMPERSAND,
+    KEY_APOSTROPHE,
+    KEY_LPAREN,
+    KEY_RPAREN,
+    KEY_ASTERISK,
+    KEY_PLUS,
+    KEY_COMMA,
+    KEY_MINUS,
+    KEY_PERIOD,
+    KEY_SLASH,
+
+    // 数字 0–9
+    KEY_0 = 48, KEY_1, KEY_2, KEY_3, KEY_4,
+    KEY_5, KEY_6, KEY_7, KEY_8, KEY_9,
+
+    KEY_COLON = 58,
+    KEY_SEMICOLON,
+    KEY_LESS,
+    KEY_EQUAL,
+    KEY_GREATER,
+    KEY_QUESTION,
+    KEY_AT,
+
+    // 大写字母 A–Z
+    KEY_A = 65, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J,
+    KEY_K, KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T,
+    KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z,
+
+    KEY_LBRACKET = 91,
+    KEY_BACKSLASH,
+    KEY_RBRACKET,
+    KEY_CARET,
+    KEY_UNDERSCORE,
+    KEY_BACKTICK,
+
+    // 小写字母 a–z
+    KEY_a = 97, KEY_b, KEY_c, KEY_d, KEY_e, KEY_f, KEY_g, KEY_h, KEY_i, KEY_j,
+    KEY_k, KEY_l, KEY_m, KEY_n, KEY_o, KEY_p, KEY_q, KEY_r, KEY_s, KEY_t,
+    KEY_u, KEY_v, KEY_w, KEY_x, KEY_y, KEY_z,
+
+    KEY_LBRACE = 123,
+    KEY_PIPE,
+    KEY_RBRACE,
+    KEY_TILDE,
+    KEY_DELETE,
+
+    // 扩展键（ASCII 没有，需要自定义）
+    KEY_F1 = 256,
+    KEY_F2,
+    KEY_F3,
+    KEY_F4,
+    KEY_F5,
+    KEY_F6,
+    KEY_F7,
+    KEY_F8,
+    KEY_F9,
+    KEY_F10,
+    KEY_F11,
+    KEY_F12,
+
+    KEY_LEFT,
+    KEY_RIGHT,
+    KEY_UP,
+    KEY_DOWN,
+
+    KEY_INSERT,
+    KEY_HOME,
+    KEY_END,
+    KEY_PAGEUP,
+    KEY_PAGEDOWN,
+
+    KEY_UNKNOWN
+};

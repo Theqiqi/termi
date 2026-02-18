@@ -6,7 +6,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <errno.h>
-
+#include <string.h>
 class TerminalGuard {
 public:
     TerminalGuard() {
@@ -40,11 +40,11 @@ public:
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     }
     // 封装一个简单的读取函数
-    int readKey() {
+    int readKey()
+    {
         unsigned char ch;
         ssize_t nread = read(STDIN_FILENO, &ch, 1);
         if (nread <= 0) return 0;
-
         if (ch == 27) { // 发现 Esc
             unsigned char next[2];
             // 尝试以非阻塞方式再读两个字符
@@ -63,6 +63,7 @@ public:
         }
         return ch;
     }
+
 private:
     struct termios orig_termios;
 };

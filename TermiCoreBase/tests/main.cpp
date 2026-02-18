@@ -16,7 +16,7 @@ int main() {
 
         // 静态背景
         DrawRectangle(2, 2, 20, 5, '#');
-        DrawText("ENGINE READY", 5, 4);
+        DrawText( 5, 4,"ENGINE READY");
 
         // 动态元素
         DrawCircle(posX, 15, 4, '@');

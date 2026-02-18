@@ -23,6 +23,7 @@ int cg_width(const ConsoleCanvas* canvas);
 int cg_height(const ConsoleCanvas* canvas);
 
 int cg_get_key(ConsoleCanvas* canvas);
+
 // 检查窗口变化（返回 1 表示变化，0 表示无变化）
 int cg_check_resize(ConsoleCanvas* canvas);
 // include/cg_gfx.h

@@ -25,6 +25,7 @@ void DrawText(int x, int y,const char* text);
 
 // 输入检测
 bool IsKeyPressed(int key);
+
 int GetScreenWidth(void);
 int GetScreenHeight(void);
 void SetTargetFPS(int fps);
@@ -39,4 +40,5 @@ void DrawTextEx( int x, int y, const char* text,const char* color);
 
 void PlayConsoleSound(void);
 void SignalHandler(int sig);
+
 #endif

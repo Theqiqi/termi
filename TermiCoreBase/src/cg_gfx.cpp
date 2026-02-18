@@ -73,6 +73,7 @@ extern "C" int cg_get_key(ConsoleCanvas* canvas) {
     return canvas->guard.readKey();
 }
 
+
 extern "C" int cg_check_resize(ConsoleCanvas* canvas) {
     if (!canvas) return 0;
     return canvas->topology.check_and_update() ? 1 : 0;
