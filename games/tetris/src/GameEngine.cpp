@@ -8,6 +8,7 @@ GameEngine::GameEngine(int targetFPS)
     : m_ticker(targetFPS) {
     LogSystem::InitDebugFile(); // <--- 加上这句，每次运行先清空旧日志
     srand((unsigned int)time(NULL));
+    m_ctx.aiSpeedMode = AI_SMOOTH;
     m_logic.Reset(m_ctx);
 }
 void GameEngine::Run() {
@@ -34,48 +35,101 @@ void GameEngine::Run() {
     }
 }
 void GameEngine::UpdatePhysics(float dt) {
-    if (m_ctx.isAIMode) {
-        // AI 模式下，我们大幅增加 dt，或者直接调用 Tick
-        // 让方块在 AI 思考完路径后立刻下落
-        m_logic.Update(m_ctx, dt * 5.0f); // 5倍速，或者直接用下面更狠的方法
-    } else {
-        m_logic.Update(m_ctx, dt);
-    }
-    m_ctx.ghostY = m_logic.CalculateLandY(m_ctx);
+    // 即使在 AI 模式下，如果 lineClearTimer 刚结束，可能需要这一步来刷新棋盘
+    // 建议把“行下移”的逻辑从 UpdatePhysics 剥离，放在一个独立的 m_logic.UpdateBoard() 里
+    m_logic.Update(m_ctx, dt);
 }
+// GameEngine.cpp 里的 ProcessGameFrame 函数
 void GameEngine::ProcessGameFrame(float dt) {
     GatherInput();
 
-    // 1. 动画更新（独立于 AI 和 暂停之外，除非你希望暂停时动画也停）
-    m_logic.HandleLineClearAnimation(m_ctx, dt);
-
-    // 核心拦截：如果死了或暂停了，后面 AI 和物理统统不跑
-    if (m_ctx.isPaused || m_ctx.isGameOver) {
-        GenerateFeedback(); // 哪怕死了也要渲染最后一帧
+    // 1. 优先级最高：消行、暂停、结束（物理层拦截）
+    if (m_ctx.isPaused || m_ctx.isGameOver || m_ctx.lineClearTimer > 0) {
+        m_logic.Update(m_ctx, dt); // 确保消行下落动画运行
+        GenerateFeedback();
         return;
     }
 
+    // 2. 逻辑分发
     if (m_ctx.isAIMode) {
-        // 只有当消行动画结束（timer <= 0）且 没死 的时候才思考
-        if (m_ctx.lineClearTimer <= 0) {
-            static float aiTick = 0;
-            aiTick += dt;
-            // 建议将 AI 速度调慢一点点（0.2s），方便肉眼观察
-            if (aiTick >= 0.2f) {
-                m_ai.Think(m_ctx, m_logic);
-                aiTick = 0;
-            }
-        }
+        HandleAILogic(dt); // 抽离出来的 AI 专用函数
     } else {
-        if (m_ctx.lineClearTimer <= 0) {
-            UpdatePhysics(dt);
+        UpdatePhysics(dt); // 手动模式
+    }
+
+    m_ctx.ghostY = m_logic.CalculateLandY(m_ctx);
+    GenerateFeedback();
+}
+void GameEngine::ExecuteAIDecision() {
+    if (!m_ctx.hasAIDecision) return;
+
+    // 快速模式逻辑
+    if (m_ctx.aiSpeedMode == AI_INSTANT) {
+        m_ctx.curX = m_ctx.cachedTargetX;
+        m_ctx.curRotation = m_ctx.cachedTargetRotation;
+        m_logic.HardDrop(m_ctx);
+        m_ctx.hasAIDecision = false; // 必须设为 false
+        return;
+    }
+
+    // 慢速模式逻辑
+    bool changed = false;
+    if (m_ctx.curRotation != m_ctx.cachedTargetRotation) {
+        if (!m_logic.TryRotate(m_ctx)) {
+            m_ctx.hasAIDecision = false; // 转不动就重新想
+            return;
+        }
+        changed = true;
+    }
+    else if (m_ctx.curX != m_ctx.cachedTargetX) {
+        int dir = (m_ctx.cachedTargetX > m_ctx.curX) ? 1 : -1;
+        if (!m_logic.Move(m_ctx, dir, 0)) {
+            m_ctx.hasAIDecision = false; // 走不动就重新想
+            return;
+        }
+        changed = true;
+    }
+
+    if (!changed) {
+        // 已经对准，尝试下落
+        if (!m_logic.Move(m_ctx, 0, 1)) {
+            m_logic.ProcessGravityStep(m_ctx);
+            m_ctx.hasAIDecision = false;
+        }
+    }
+}
+// GameEngine.cpp
+
+void GameEngine::HandleAILogic(float dt) {
+    m_ctx.aiTimer += dt;
+    float delay = (m_ctx.aiSpeedMode == AI_INSTANT) ? 0.01f : 0.15f;
+
+    // 1. 只有当 pieceID 改变，或者当前没有有效决策时，才 Think
+    if (!m_ctx.hasAIDecision || m_ctx.lastThinkPieceID != m_ctx.pieceID) {
+        AIDecision dec = m_ai.Think(m_ctx, m_logic);
+        if (dec.isValid) {
+            m_ctx.cachedTargetX = dec.targetX;
+            m_ctx.cachedTargetRotation = dec.targetRotation;
+            m_ctx.hasAIDecision = true;
+            m_ctx.lastThinkPieceID = m_ctx.pieceID;
+        } else {
+            // 如果 AI 完全找不到路，强制让方块下落一格，防止死等卡死
+            if (m_ctx.aiTimer >= delay) {
+                m_logic.Move(m_ctx, 0, 1);
+                m_ctx.aiTimer = 0;
+            }
+            return;
         }
     }
 
-    GenerateFeedback();
+    // 2. 执行决策
+    if (m_ctx.aiTimer >= delay) {
+        ExecuteAIDecision();
+        m_ctx.aiTimer = 0;
+    }
 }
-
 void GameEngine::GatherInput() {
+
     // 关键点 A：本帧唯一一次按键抓取
     int rawKey = GetKeyPressed();
     if (rawKey <= 0) return; // 没按键直接走，节省 CPU
@@ -103,13 +157,29 @@ void GameEngine::GatherInput() {
         return; // 暂停切换完也要 return，防止暂停瞬间方块还被操作
     }
 
+
+    if (rawKey == KEY_N || rawKey == 'n' || rawKey == 'N') {
+        if (m_ctx.aiSpeedMode == AI_INSTANT) {
+            m_ctx.aiSpeedMode = AI_SMOOTH;
+            LogSystem::Log("AI Speed: SMOOTH");
+        } else {
+            m_ctx.aiSpeedMode = AI_INSTANT;
+            LogSystem::Log("AI Speed: INSTANT");
+        }
+        // 【关键】切换速度时，重置计时器，防止瞬间爆发
+        m_ctx.aiTimer = 0;
+        return;
+    }
     // 4. M 模式切换
     if (rawKey == KEY_M || rawKey == 'm' || rawKey == 'M') {
         m_ctx.isAIMode = !m_ctx.isAIMode;
-        LogSystem::Log(m_ctx.isAIMode ? "System: AI MODE ON" : "System: AI MODE OFF");
+        // 【关键】切换模式时，重置决策状态，防止拿旧的决策去跑新模式
+        m_ctx.hasAIDecision = false;
+        m_ctx.lastThinkPieceID = -1; // 强制重新思考
+        m_ctx.aiTimer = 0;
+        LogSystem::Log(m_ctx.isAIMode ? "AI MODE ON" : "AI MODE OFF");
         return;
     }
-
     // --- 第二层：逻辑拦截 (暂停或死亡时，严禁操作方块) ---
     if (m_ctx.isPaused || m_ctx.isGameOver || m_ctx.lineClearTimer > 0) {
         return;

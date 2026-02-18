@@ -24,6 +24,8 @@ public:
     void PostUpdate();
     void Run();
     void UpdateSystemState();
+    void HandleAILogic(float dt);
+    void ExecuteAIDecision();
 private:
 
     // 所有组件作为成员变量

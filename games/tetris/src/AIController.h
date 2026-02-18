@@ -9,10 +9,16 @@ struct BestMove {
     double score;   // 该位置的评分
 };
 
+struct AIDecision {
+    int targetX;
+    int targetRotation;
+    bool isValid = false;
+};
+
 class AIController {
 public:
     // 核心接口：思考并行动
-    void Think(GameContext& ctx, GameLogic& logic);
+    AIDecision Think(GameContext& ctx, GameLogic& logic);
 
 private:
     // 计算某个残局的分数
@@ -26,5 +32,6 @@ private:
 
     // 统计平整度（高度差）
     int GetBumpiness(const int board[20][10]);
-
+    bool IsPathClear(const GameContext& ctx, GameLogic& logic, int targetX, int targetR);
+    bool IsPathReachable(const GameContext& ctx, GameLogic& logic, int targetX, int targetR);
 };

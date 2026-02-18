@@ -1,6 +1,7 @@
 // GameContext.h - 这是你的 Model 数据中心
 #pragma once
 #include <vector>
+enum AISpeed { AI_INSTANT, AI_SMOOTH };
 struct GameContext {
     // --- 1. 静态环境 ---
     int board[20][10]; // 0:空, 1-7:颜色索引
@@ -47,4 +48,16 @@ struct GameContext {
     bool isSpacePressed;
     bool curType;
 
+    AISpeed aiSpeedMode = AI_INSTANT; // 默认快速
+    // AI 决策缓存
+    bool hasAIDecision = false;
+    int cachedTargetX = 0;
+    int cachedTargetRotation = 0;
+    int lastHandledPieceId = -1; // 用于判断是否是新的方块（可以用 curPieceType 结合某种计数）
+    // 新增：防抖 ID
+    int pieceID = 0;             // 每次生成新方块时 +1
+    int lastThinkPieceID = -1;   // AI 上次思考的是哪个方块
+
+    // AI 计时器 (移到这里，防止 static 变量在切换模式时错乱)
+    float aiTimer = 0.0f;
 };

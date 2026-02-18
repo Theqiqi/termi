@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include "LogSystem.h"
+#include <cstring>
 GameLogic::GameLogic() {
 
 }
@@ -152,6 +153,9 @@ void GameLogic::SpawnPiece(GameContext& ctx) {
         ctx.isGameOver = true;
         LogSystem::Log("!!! GAME OVER !!! Piece blocked at Spawn");
     }
+    ctx.pieceID++; // 【关键】生成新方块，ID + 1
+    ctx.hasAIDecision = false; // 标记新方块还没被思考过
+    ctx.curY = 0;
 }
 int GameLogic::CalculateScore(int lines) {
     // 采用经典的俄罗斯方块计分倍率
@@ -177,7 +181,9 @@ void GameLogic::Reset(GameContext& ctx) {
     ctx.lineClearTimer = 0;
     ctx.dropTimer = 0;
     ctx.dropInterval = 0.5f; // 重置速度
-
+    ctx.pieceID = 0;
+    ctx.lastThinkPieceID = -1;
+    ctx.hasAIDecision = false;
     // 3. 生成第一个方块
     ctx.nextPieceType = rand() % 7;
     SpawnPiece(ctx);
@@ -210,46 +216,49 @@ void GameLogic::HardDrop(GameContext& ctx) {
 void GameLogic::ExecutePhysicClear(GameContext& ctx) {
     if (ctx.linesToClear.empty()) return;
 
-    // 1. 初始化偏移数组
-    for (int i = 0; i < 20; i++) ctx.rowOffsets[i] = 0;
-
-    // 2. 降序排列
-    std::sort(ctx.linesToClear.begin(), ctx.linesToClear.end(), std::greater<int>());
-
-    // 3. 计算偏移：对于每一个被消掉的行，它上方的所有行都要下落一格
-    for (int rowToClear : ctx.linesToClear) {
-        for (int y = 0; y < rowToClear; y++) {
-            ctx.rowOffsets[y]++;
-        }
-    }
-
-    // 4. 物理搬运（执行你之前那个稳健的 newBoard 搬运逻辑）
     int newBoard[20][10] = {0};
     int writeRow = 19;
+
+    // 从底向上扫描原棋盘
     for (int y = 19; y >= 0; --y) {
         bool isCleared = false;
         for (int cRow : ctx.linesToClear) {
-            if (y == cRow) { isCleared = true; break; }
+            if (y == cRow) {
+                isCleared = true;
+                break;
+            }
         }
+
+        // 如果这一行不需要消除，就把它写进新棋盘的当前写入口
         if (!isCleared) {
-            for (int x = 0; x < 10; ++x) newBoard[writeRow][x] = ctx.board[y][x];
-            writeRow--;
+            for (int x = 0; x < 10; ++x) {
+                newBoard[writeRow][x] = ctx.board[y][x];
+            }
+            writeRow--; // 写入口上移
         }
-    }
-    for (int y = 0; y < 20; ++y) {
-        for (int x = 0; x < 10; ++x) ctx.board[y][x] = newBoard[y][x];
     }
 
-    // 5. 开启下落动画计时（0.15秒足够丝滑）
+    // 覆盖原棋盘
+    memcpy(ctx.board, newBoard, sizeof(ctx.board));
+
     ctx.dropAnimTimer = 0.2f;
     ctx.linesToClear.clear();
 }
+
 bool GameLogic::HandleLineClearAnimation(GameContext& ctx, float dt) {
     if (ctx.lineClearTimer > 0) {
         ctx.lineClearTimer -= dt;
         if (ctx.lineClearTimer <= 0) {
-            ExecutePhysicClear(ctx); // 物理消除
-            SpawnPiece(ctx);         // 生成新方块 <-- 关键！AI 就等这一句
+            // 1. 先执行物理消除，把上方方块挪下来
+            ExecutePhysicClear(ctx);
+
+            // 2. 物理搬运完后，再增加 pieceID
+            // 这样能确保 AI 思考时，ctx.board 已经是搬运后的正确状态
+            ctx.pieceID++;
+            ctx.hasAIDecision = false;
+
+            // 3. 生成新方块
+            SpawnPiece(ctx);
             ctx.lineClearTimer = 0;
         }
         return true;
@@ -323,25 +332,58 @@ bool GameLogic::IsPositionValid(const GameContext& ctx, int x, int y, int r) {
     // 核心修正：必须从 ctx 中取出当前的 curPieceType 传给接口 A
     return IsPositionValid(ctx.curPieceType, x, y, r, ctx.board);
 }
-int GameLogic::SimulateDrop(const GameContext& ctx, int x, int r, int tempBoard[20][10]) {
-    // 1. 检查起始位置（使用 ctx.curPieceType）
-    if (!IsPositionValid(ctx.curPieceType, x, 0, r, tempBoard)) return -1;
-
-    // 2. 模拟下落
-    int y = 0;
-    while (IsPositionValid(ctx.curPieceType, x, y + 1, r, tempBoard)) {
-        y++;
-    }
-
-    // 3. 写入模拟棋盘
-    shp::Point pts[4];
-    shp::Get(ctx.curPieceType, r, pts);
-    for (int i = 0; i < 4; i++) {
-        int tx = x + pts[i].x;
-        int ty = y + pts[i].y;
-        if (tx >= 0 && tx < 10 && ty >= 0 && ty < 20) {
-            tempBoard[ty][tx] = 1; // 标记占用
+// 在 logic.SimulateDrop 内部的伪代码逻辑
+int GameLogic::SimulateDrop(const GameContext& ctx, int targetX, int targetR, int board[20][10]) {
+    // 1. 模拟下落寻找最终落点 finalY
+    int finalY = -1;
+    // 从顶部 y=0 开始向下试探，直到发生碰撞
+    for (int y = 0; y < 20; y++) {
+        if (IsPositionValid(ctx.curPieceType, targetX, y, targetR, board)) {
+            finalY = y;
+        } else {
+            break;
         }
     }
-    return y;
+
+    // 如果找不到任何合法位置，说明该列已满
+    if (finalY == -1) return -1;
+
+    // 2. 将方块形状写入传入的模拟棋盘 board
+    shp::Point points[4];
+    shp::Get(ctx.curPieceType, targetR, points); // 使用你已有的 shp::Get 获取坐标
+
+    for (int i = 0; i < 4; i++) {
+        int tx = targetX + points[i].x;
+        int ty = finalY + points[i].y;
+
+        // 边界检查并写入
+        if (tx >= 0 && tx < 10 && ty >= 0 && ty < 20) {
+            // 写入一个非零值表示此处已有方块
+            board[ty][tx] = ctx.curPieceType + 1;
+        }
+    }
+
+    // 3. 重要：在模拟棋盘上模拟消行
+    // 如果不模拟消行，AI 就不知道这手棋其实能把下面的洞消掉
+    for (int y = 0; y < 20; y++) {
+        bool full = true;
+        for (int x = 0; x < 10; x++) {
+            if (board[y][x] == 0) {
+                full = false;
+                break;
+            }
+        }
+        if (full) {
+            // 模拟消除该行：上方所有行下移
+            for (int ty = y; ty > 0; ty--) {
+                for (int tx = 0; tx < 10; tx++) {
+                    board[ty][tx] = board[ty - 1][tx];
+                }
+            }
+            // 顶行补零
+            for (int tx = 0; tx < 10; tx++) board[0][tx] = 0;
+        }
+    }
+
+    return finalY;
 }
