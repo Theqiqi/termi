@@ -7,7 +7,7 @@
 #include "shp.h"
 #include <algorithm>
 #include <cmath>
-
+#include "LogSystem.h"
 GameLogic::GameLogic() {
 
 }
@@ -138,20 +138,19 @@ int GameLogic::ClearLines(GameContext& ctx) {
     return 0;
 }
 void GameLogic::SpawnPiece(GameContext& ctx) {
-    // 1. 继承上一个 Next
+    // 如果已经死了，直接返回，不要再次触发死亡逻辑
+    if (ctx.isGameOver) return;
+
     ctx.curPieceType = ctx.nextPieceType;
-
-    // 2. 生成新的 Next (给 UI 渲染用)
     ctx.nextPieceType = rand() % 7;
-
-    // 3. 重置位置和旋转
     ctx.curRotation = 0;
     ctx.curX = 3;
     ctx.curY = 0;
 
-    // 出生检测（必须放在赋值之后）
+    // 出生瞬间碰撞检查
     if (CheckCollision(ctx, ctx.curX, ctx.curY, ctx.curRotation)) {
         ctx.isGameOver = true;
+        LogSystem::Log("!!! GAME OVER !!! Piece blocked at Spawn");
     }
 }
 int GameLogic::CalculateScore(int lines) {
@@ -166,29 +165,24 @@ int GameLogic::CalculateScore(int lines) {
 }
 
 void GameLogic::Reset(GameContext& ctx) {
-    // 1. 清空棋盘：将 10x20 的数组全部置 0
+    // 1. 清空棋盘（最重要的！）
     for (int y = 0; y < 20; y++) {
-        for (int x = 0; x < 10; x++) {
-            ctx.board[y][x] = 0;
-        }
+        for (int x = 0; x < 10; x++) ctx.board[y][x] = 0;
     }
 
-    // 2. 重置基础属性
-    ctx.score = 0;
+    // 2. 状态全部归零
     ctx.isGameOver = false;
-    ctx.shouldExit = false;
-    ctx.dropInterval = 0.5f; // 初始下落速度
-    ctx.dropTimer = 0.0f;
+    ctx.isPaused = false;
+    ctx.score = 0;
+    ctx.lineClearTimer = 0;
+    ctx.dropTimer = 0;
+    ctx.dropInterval = 0.5f; // 重置速度
 
-    // 3. 事件标志位初始化
-    ctx.lineClearedEvent = false;
-
-    // 4. 关键：初始化方块传送带
-    // 必须先给 next 一个随机值，否则第一次 SpawnPiece 时 cur 会拿到 0
+    // 3. 生成第一个方块
     ctx.nextPieceType = rand() % 7;
-
-    // 调用之前写好的 SpawnPiece 产生第一个当前方块
     SpawnPiece(ctx);
+
+    LogSystem::Log("--- GAME RESET SUCCESS ---");
 }
 int GameLogic::CalculateLandY(const GameContext& ctx) {
     int landY = ctx.curY;
@@ -201,7 +195,7 @@ int GameLogic::CalculateLandY(const GameContext& ctx) {
 }
 
 void GameLogic::HardDrop(GameContext& ctx) {
-    if (ctx.lineClearTimer > 0) return;
+    if (ctx.isGameOver || ctx.lineClearTimer > 0) return; // 死亡拦截
 
     ctx.curY = CalculateLandY(ctx);
     LockToBoard(ctx);
@@ -211,13 +205,8 @@ void GameLogic::HardDrop(GameContext& ctx) {
         ApplyScoreAndFeedback(ctx, lines);
     } else {
         SpawnPiece(ctx);
-        if (CheckCollision(ctx, ctx.curX, ctx.curY, ctx.curRotation)) {
-            ctx.isGameOver = true;
-        }
     }
-    ctx.dropTimer = 0.0f;
 }
-
 void GameLogic::ExecutePhysicClear(GameContext& ctx) {
     if (ctx.linesToClear.empty()) return;
 
@@ -257,18 +246,11 @@ void GameLogic::ExecutePhysicClear(GameContext& ctx) {
 }
 bool GameLogic::HandleLineClearAnimation(GameContext& ctx, float dt) {
     if (ctx.lineClearTimer > 0) {
-        float prevTimer = ctx.lineClearTimer;
         ctx.lineClearTimer -= dt;
-
-        // 关键点：在特效消失的一瞬间（比如 timer 降到 0 以前的最后一刻）
-        // 我们才执行 ExecutePhysicClear，这样视觉上会有“碎完才掉”的感觉
-        if (prevTimer > 0.05f && ctx.lineClearTimer <= 0.05f) {
-            // 此时执行搬运，玩家会看到粒子碎完，方块瞬间补位的效果
-            ExecutePhysicClear(ctx);
-        }
-
         if (ctx.lineClearTimer <= 0) {
-            SpawnPiece(ctx);
+            ExecutePhysicClear(ctx); // 物理消除
+            SpawnPiece(ctx);         // 生成新方块 <-- 关键！AI 就等这一句
+            ctx.lineClearTimer = 0;
         }
         return true;
     }
@@ -316,51 +298,50 @@ void GameLogic::ApplyScoreAndFeedback(GameContext& ctx, int lines) {
     float newInterval = 0.5f * pow(0.9f, (float)ctx.score / 1000.0f);
     ctx.dropInterval = (newInterval < 0.1f) ? 0.1f : newInterval;
 }
-bool GameLogic::IsPositionValid(int x, int y, int r, const int board[20][10]) {
+// 增加 pieceType 参数，让 AI 能够指定方块种类进行模拟
+bool GameLogic::IsPositionValid(int pieceType, int x, int y, int r, const int board[20][10]) {
     shp::Point pts[4];
-    // 这里调用你之前的 shp 数据获取函数
-    // 假设 ctx.curType 在这里是可知的，或者你需要把 type 也传进来
-    // 为了 AI 方便，建议把 type 也作为参数，或者从 ctx 取
-    // 暂时假设我们还是处理当前正在下落的 type
-    // shp::Get(ctx.curType, r, pts);
+    shp::Get(pieceType, r, pts);
 
     for (int i = 0; i < 4; i++) {
-        int targetX = x + pts[i].x;
-        int targetY = y + pts[i].y;
+        int tx = x + pts[i].x;
+        int ty = y + pts[i].y;
 
-        // 1. 检查左右边界
-        if (targetX < 0 || targetX >= 10) return false;
+        // 1. 墙体检查
+        if (tx < 0 || tx >= 10 || ty >= 20) return false;
 
-        // 2. 检查底部边界
-        if (targetY >= 20) return false;
-
-        // 3. 检查是否与已有方块重叠 (targetY < 0 时是在屏幕上方，不算碰撞)
-        if (targetY >= 0) {
-            if (board[targetY][targetX] > 0) return false;
+        // 2. 只有当 ty >= 0 时才检查棋盘碰撞
+        if (ty >= 0) {
+            // 如果这里撞了，说明 board[0][x] 真的有东西
+            if (board[ty][tx] != 0) return false;
         }
+        // 注意：如果 ty < 0，应该直接 return true（允许方块在屏幕上方）
     }
     return true;
 }
+bool GameLogic::IsPositionValid(const GameContext& ctx, int x, int y, int r) {
+    // 核心修正：必须从 ctx 中取出当前的 curPieceType 传给接口 A
+    return IsPositionValid(ctx.curPieceType, x, y, r, ctx.board);
+}
 int GameLogic::SimulateDrop(const GameContext& ctx, int x, int r, int tempBoard[20][10]) {
-    // 1. 检查初始位置是否合法
-    if (!IsPositionValid(x, ctx.curY, r, tempBoard)) return -1;
+    // 1. 检查起始位置（使用 ctx.curPieceType）
+    if (!IsPositionValid(ctx.curPieceType, x, 0, r, tempBoard)) return -1;
 
-    // 2. 模拟下落直到碰撞
-    int y = ctx.curY;
-    while (IsPositionValid(x, y + 1, r, tempBoard)) {
+    // 2. 模拟下落
+    int y = 0;
+    while (IsPositionValid(ctx.curPieceType, x, y + 1, r, tempBoard)) {
         y++;
     }
 
-    // 3. 将方块“虚构”写入模拟棋盘
+    // 3. 写入模拟棋盘
     shp::Point pts[4];
-    shp::Get(ctx.curType, r, pts);
+    shp::Get(ctx.curPieceType, r, pts);
     for (int i = 0; i < 4; i++) {
-        int targetX = x + pts[i].x;
-        int targetY = y + pts[i].y;
-        if (targetY >= 0 && targetY < 20) tempBoard[targetY][targetX] = 1;
+        int tx = x + pts[i].x;
+        int ty = y + pts[i].y;
+        if (tx >= 0 && tx < 10 && ty >= 0 && ty < 20) {
+            tempBoard[ty][tx] = 1; // 标记占用
+        }
     }
-
-    // 4. 计算并清理模拟消行（AI 喜欢消行）
-    // ... 这里可以简化，只需返回 y 即可
     return y;
 }

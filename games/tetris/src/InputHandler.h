@@ -56,21 +56,12 @@ public:
 
         // 仅在手动玩游戏时调用
     void ProcessGameKeys(GameContext& ctx, GameLogic& logic, int key) {
-        if (key <= 0) return;
-
+        // 此时 key 是由 Engine 传进来的，不要在函数内部 GetKeyPressed()
         switch (key) {
-            // 方向键扩展值
-            case KEY_LEFT:  logic.Move(ctx, -1, 0); break;
-            case KEY_RIGHT: logic.Move(ctx, 1, 0);  break;
-            case KEY_DOWN:  logic.Move(ctx, 0, 1);  break;
-            case KEY_UP:    logic.TryRotate(ctx);   break;
-
-                // 兼容小写字母
-            case KEY_a: case KEY_A: logic.Move(ctx, -1, 0); break;
-            case KEY_d: case KEY_D: logic.Move(ctx, 1, 0);  break;
-            case KEY_s: case KEY_S: logic.Move(ctx, 0, 1);  break;
-            case KEY_w: case KEY_W: logic.TryRotate(ctx);   break;
-
+            case KEY_LEFT:  case 'a': case 'A': logic.Move(ctx, -1, 0); break;
+            case KEY_RIGHT: case 'd': case 'D': logic.Move(ctx, 1, 0);  break;
+            case KEY_DOWN:  case 's': case 'S': logic.Move(ctx, 0, 1);  break;
+            case KEY_UP:    case 'w': case 'W': logic.TryRotate(ctx);   break;
             case KEY_SPACE: logic.HardDrop(ctx); break;
         }
 

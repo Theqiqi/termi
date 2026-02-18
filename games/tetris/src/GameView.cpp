@@ -47,7 +47,6 @@ void GameView::Render(const GameContext& ctx){
 
         DrawInfoPanel(ctx);
 
-
         // 重新焊死中隔线和右外墙，确保任何文字溢出都被盖住
         DrawVLine(sepX, startY, frameHeight + 1, '#');
         DrawVLine(startX + frameWidth - 1, startY, frameHeight + 1, '#');

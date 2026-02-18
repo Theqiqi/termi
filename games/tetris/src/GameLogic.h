@@ -34,10 +34,10 @@ public:
     void HardDrop(GameContext& ctx);
     //ai
     int SimulateDrop(const GameContext& ctx, int x, int r, int tempBoard[20][10]);
-    bool IsPositionValid(int x, int y, int r, const int board[20][10]);
-    bool IsPositionValid(const GameContext& ctx, int x, int y, int r) {
-        return IsPositionValid(x, y, r, ctx.board);
-    }
+    bool IsPositionValid(int pieceType, int x, int y, int r, const int board[20][10]);
+    bool IsPositionValid(const GameContext& ctx, int x, int y, int r);
+
+
 //private:
 public :
 

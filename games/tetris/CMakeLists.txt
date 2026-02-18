@@ -16,6 +16,8 @@ set(LIB_SOURCES
         src/AIController.h
         src/GameEngine.cpp
         src/GameEngine.h
+        src/LogSystem.cpp
+        src/LogSystem.h
 
 )
 

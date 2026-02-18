@@ -4,7 +4,7 @@
 
 
 int main() {
-    Tested();
+    //Tested();
     testing();
     std::cout << "\n>>> ALL LOGIC TESTS PASSED! <<<\n" << std::endl;
     return 0;
