@@ -1,5 +1,7 @@
 # Termi - 终端游戏框架
 
+[English Version](./doc/README.md)
+
 一个轻量级的 C++ 终端游戏引擎，内置贪吃蛇和俄罗斯方块两款经典游戏。
 
 ## 特性

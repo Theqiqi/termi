@@ -1,5 +1,7 @@
 # Termi - Console Games Framework
 
+[中文版](../README.md)
+
 A lightweight C++ terminal-based game engine with built-in games (Snake & Tetris).
 
 ## Features
