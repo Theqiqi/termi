@@ -10,7 +10,7 @@ A lightweight C++ terminal-based game engine with built-in games (Snake & Tetris
 - **Two Classic Games**
   - Snake with AI autopilot
   - Tetris with AI controller
-- **No external dependencies** - Pure C++ standard library
+- **Standard Library Only** - C++ standard library + Linux platform APIs, no third-party libraries
 - **CMake build system** with preset configurations
 
 ## Project Structure
