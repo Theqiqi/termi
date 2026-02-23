@@ -16,40 +16,38 @@
       }
     },
     {
-      "name": "linux-debug",
-      "displayName": "Linux Debug",
-      "description": "针对 Linux 的调试配置（开启调试符号，禁用优化）",
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "调试配置：开启调试符号，禁用优化",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-Wall -Wextra -g"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "linux-release",
-      "displayName": "Linux Release",
-      "description": "针对 Linux 的发布配置（开启 O3 优化，去除调试符号）",
+      "name": "release",
+      "displayName": "Release",
+      "description": "发布配置：开启 O3 优化",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_FLAGS": "-O3 -march=native -DNDEBUG"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
   "buildPresets": [
     {
       "name": "debug",
-      "configurePreset": "linux-debug"
+      "configurePreset": "debug"
     },
     {
       "name": "release",
-      "configurePreset": "linux-release"
+      "configurePreset": "release"
     }
   ],
   "testPresets": [
     {
       "name": "test-all",
-      "configurePreset": "linux-debug",
+      "configurePreset": "debug",
       "output": {
         "outputOnFailure": true
       }

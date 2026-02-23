@@ -3,12 +3,11 @@
 #
 cmake_minimum_required (VERSION 3.10)
 
-project ("MyConsoleGames")
+project ("games")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 # Include sub-projects.
-enable_testing()
-add_subdirectory (TermiCoreBase)
-add_subdirectory(games)
+add_subdirectory(snake)
+add_subdirectory(tetris)

@@ -5,3 +5,6 @@ bin/
 cmake-build-*/
 .idea
 Testing
+out
+CMakeUserPresets.json
+release

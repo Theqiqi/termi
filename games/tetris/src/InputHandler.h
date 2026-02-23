@@ -55,7 +55,7 @@ public:
             case KEY_UP:    case 'w': case 'W': logic.TryRotate(ctx);   break;
             case KEY_SPACE: logic.HardDrop(ctx); break;
         }
-
+    
 #ifdef GAME_DEBUG
         cheat(ctx, logic, key);
 #endif

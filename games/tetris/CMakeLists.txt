@@ -4,7 +4,7 @@ project(TetrisGameProject)
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 17)
 # 使用 CURRENT 关键字，防止 bin 目录跑到项目根目录去
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 # 1. 搜集逻辑层的源文件（必须包含 .cpp！）
 # 假设你的文件都在 src 目录下

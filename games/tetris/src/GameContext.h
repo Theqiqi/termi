@@ -60,4 +60,5 @@ struct GameContext {
 
     // AI 计时器 (移到这里，防止 static 变量在切换模式时错乱)
     float aiTimer = 0.0f;
+
 };

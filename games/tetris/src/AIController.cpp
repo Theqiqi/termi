@@ -7,8 +7,6 @@
 #include <cstring>
 #include "LogSystem.h"
 
-
-
 // AIController.cpp
 
 AIDecision AIController::Think(GameContext& ctx, GameLogic& logic) {
